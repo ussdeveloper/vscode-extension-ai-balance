@@ -1,0 +1,113 @@
+{
+  "name": "ai-balance",
+  "displayName": "AI Balance",
+  "description": "Shows DeepSeek and OpenRouter API balance in the status bar",
+  "version": "0.2.0",
+  "publisher": "sulaco",
+  "icon": "icons/deepseek.png",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "aiBalance.refresh",
+        "title": "AI Balance: Refresh Now"
+      },
+      {
+        "command": "aiBalance.configure",
+        "title": "AI Balance: Open Settings"
+      }
+    ],
+    "configuration": {
+      "title": "AI Balance",
+      "properties": {
+        "aiBalance.providers.deepseek.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show DeepSeek balance in status bar"
+        },
+        "aiBalance.providers.deepseek.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "DeepSeek API key"
+        },
+        "aiBalance.providers.deepseek.apiUrl": {
+          "type": "string",
+          "default": "https://api.deepseek.com",
+          "description": "DeepSeek API base URL"
+        },
+        "aiBalance.providers.openrouter.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show OpenRouter balance in status bar"
+        },
+        "aiBalance.providers.openrouter.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenRouter API key"
+        },
+        "aiBalance.providers.openrouter.apiUrl": {
+          "type": "string",
+          "default": "https://openrouter.ai/api",
+          "description": "OpenRouter API base URL"
+        },
+        "aiBalance.display.currency": {
+          "type": "string",
+          "default": "USD",
+          "enum": ["USD", "EUR", "PLN", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", "CZK", "DKK", "HUF", "NOK", "SEK"],
+          "enumDescriptions": [
+            "US Dollar ($)",
+            "Euro (€)",
+            "Polish Złoty (zł)",
+            "British Pound (£)",
+            "Japanese Yen (¥)",
+            "Canadian Dollar (C$)",
+            "Australian Dollar (A$)",
+            "Swiss Franc (Fr)",
+            "Chinese Yuan (¥)",
+            "Czech Koruna (Kč)",
+            "Danish Krone (kr)",
+            "Hungarian Forint (Ft)",
+            "Norwegian Krone (kr)",
+            "Swedish Krona (kr)"
+          ],
+          "description": "Target currency for balance display (uses free open.er-api.com)"
+        },
+        "aiBalance.display.showInStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show AI Balance in the status bar"
+        },
+        "aiBalance.refreshInterval": {
+          "type": "number",
+          "default": 300,
+          "description": "Auto-refresh interval in seconds (0 to disable)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p tsconfig.json",
+    "package": "vsce package --allow-missing-repository",
+    "watch": "tsc -watch -p tsconfig.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sulaco/ai-balance"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.9.1",
+    "typescript": "^6.0.3"
+  }
+}
