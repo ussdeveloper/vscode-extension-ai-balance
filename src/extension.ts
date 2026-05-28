@@ -17,7 +17,50 @@ export async function activate(context: vscode.ExtensionContext) {
 		statusBarManager.refresh();
 	});
 
-	const configureCmd = vscode.commands.registerCommand('aiBalance.configure', () => {
+	const configureCmd = vscode.commands.registerCommand('aiBalance.configure', async () => {
+		// Check if any API keys are set
+		const dsKey = await context.secrets.get('aiBalance.deepseek.apiKey');
+		const orKey = await context.secrets.get('aiBalance.openrouter.apiKey');
+
+		if (!dsKey && !orKey) {
+			// No keys at all → prompt to set them one by one
+			const setKeys = await vscode.window.showInformationMessage(
+				'No API keys configured. Would you like to set them now?',
+				'Yes, set keys'
+			);
+			if (setKeys) {
+				// DeepSeek key
+				const dsInput = await vscode.window.showInputBox({
+					title: 'DeepSeek API Key',
+					password: true,
+					placeHolder: 'sk-...',
+					ignoreFocusOut: true,
+					prompt: 'Enter your DeepSeek API key (stored securely in OS keychain)'
+				});
+				if (dsInput !== undefined && dsInput !== '') {
+					await context.secrets.store('aiBalance.deepseek.apiKey', dsInput);
+					vscode.window.showInformationMessage('DeepSeek API key saved');
+				}
+
+				// OpenRouter key
+				const orInput = await vscode.window.showInputBox({
+					title: 'OpenRouter API Key',
+					password: true,
+					placeHolder: 'sk-or-v1-...',
+					ignoreFocusOut: true,
+					prompt: 'Enter your OpenRouter API key (stored securely in OS keychain)'
+				});
+				if (orInput !== undefined && orInput !== '') {
+					await context.secrets.store('aiBalance.openrouter.apiKey', orInput);
+					vscode.window.showInformationMessage('OpenRouter API key saved');
+				}
+
+				statusBarManager.refresh();
+			}
+			return;
+		}
+
+		// Keys exist → open settings
 		vscode.commands.executeCommand('workbench.action.openSettings', '@aiBalance');
 	});
 
