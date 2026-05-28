@@ -49,5 +49,8 @@ ai-balance/
 
 ## Status Bar Display
 - Left-aligned, monochrome Codicon icons: `$(hubot)` for DeepSeek, `$(radio-tower)` for OpenRouter
-- Click opens settings (`@aiBalance`)
+- Click opens settings (`@aiBalance`) or prompts for API keys if missing
 - Tooltip shows detailed balance info
+
+## Provider Knowledge
+Use the `ai-providers` skill for comprehensive knowledge about AI model providers, their APIs, authentication methods, and model listings. Load with: `/ai-providers`
