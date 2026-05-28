@@ -54,3 +54,6 @@ ai-balance/
 
 ## Provider Knowledge
 Use the `ai-providers` skill for comprehensive knowledge about AI model providers, their APIs, authentication methods, and model listings. Load with: `/ai-providers`
+
+## VS Code Extension Development
+Use the `vscode-extension-dev` skill for comprehensive knowledge about VS Code extension APIs, SecretStorage, StatusBarItem, packaging, and publishing. Load with: `/vscode-extension-dev`
