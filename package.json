@@ -25,6 +25,18 @@
       {
         "command": "aiBalance.configure",
         "title": "AI Balance: Open Settings"
+      },
+      {
+        "command": "aiBalance.setDeepSeekKey",
+        "title": "AI Balance: Set DeepSeek API Key"
+      },
+      {
+        "command": "aiBalance.setOpenRouterKey",
+        "title": "AI Balance: Set OpenRouter API Key"
+      },
+      {
+        "command": "aiBalance.clearKeys",
+        "title": "AI Balance: Clear All API Keys"
       }
     ],
     "configuration": {
@@ -35,11 +47,6 @@
           "default": true,
           "description": "Show DeepSeek balance in status bar"
         },
-        "aiBalance.providers.deepseek.apiKey": {
-          "type": "string",
-          "default": "",
-          "description": "DeepSeek API key"
-        },
         "aiBalance.providers.deepseek.apiUrl": {
           "type": "string",
           "default": "https://api.deepseek.com",
@@ -49,11 +56,6 @@
           "type": "boolean",
           "default": true,
           "description": "Show OpenRouter balance in status bar"
-        },
-        "aiBalance.providers.openrouter.apiKey": {
-          "type": "string",
-          "default": "",
-          "description": "OpenRouter API key"
         },
         "aiBalance.providers.openrouter.apiUrl": {
           "type": "string",

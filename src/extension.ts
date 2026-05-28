@@ -6,10 +6,10 @@ let balanceProvider: BalanceProvider;
 let statusBarManager: StatusBarManager;
 let refreshTimer: ReturnType<typeof setInterval> | undefined;
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
 	console.log('AI Balance extension activating...');
 
-	balanceProvider = new BalanceProvider();
+	balanceProvider = new BalanceProvider(context.secrets);
 	statusBarManager = new StatusBarManager(balanceProvider);
 
 	// Register commands
@@ -21,12 +21,52 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.commands.executeCommand('workbench.action.openSettings', '@aiBalance');
 	});
 
-	context.subscriptions.push(refreshCmd, configureCmd, statusBarManager);
+	const setDeepSeekKeyCmd = vscode.commands.registerCommand('aiBalance.setDeepSeekKey', async () => {
+		const key = await vscode.window.showInputBox({
+			title: 'DeepSeek API Key',
+			password: true,
+			placeHolder: 'sk-...',
+			ignoreFocusOut: true,
+			prompt: 'Enter your DeepSeek API key (stored securely in OS keychain)'
+		});
+		if (key !== undefined) {
+			await context.secrets.store('aiBalance.deepseek.apiKey', key);
+			vscode.window.showInformationMessage('DeepSeek API key saved securely');
+			statusBarManager.refresh();
+		}
+	});
+
+	const setOpenRouterKeyCmd = vscode.commands.registerCommand('aiBalance.setOpenRouterKey', async () => {
+		const key = await vscode.window.showInputBox({
+			title: 'OpenRouter API Key',
+			password: true,
+			placeHolder: 'sk-or-v1-...',
+			ignoreFocusOut: true,
+			prompt: 'Enter your OpenRouter API key (stored securely in OS keychain)'
+		});
+		if (key !== undefined) {
+			await context.secrets.store('aiBalance.openrouter.apiKey', key);
+			vscode.window.showInformationMessage('OpenRouter API key saved securely');
+			statusBarManager.refresh();
+		}
+	});
+
+	const clearKeysCmd = vscode.commands.registerCommand('aiBalance.clearKeys', async () => {
+		await context.secrets.delete('aiBalance.deepseek.apiKey');
+		await context.secrets.delete('aiBalance.openrouter.apiKey');
+		vscode.window.showInformationMessage('All AI Balance API keys cleared');
+		statusBarManager.refresh();
+	});
+
+	context.subscriptions.push(
+		refreshCmd, configureCmd,
+		setDeepSeekKeyCmd, setOpenRouterKeyCmd, clearKeysCmd,
+		statusBarManager
+	);
 
 	// Listen for config changes → re-refresh
 	const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
 		if (e.affectsConfiguration('aiBalance')) {
-			// Re-schedule with new interval
 			if (e.affectsConfiguration('aiBalance.refreshInterval')) {
 				if (refreshTimer) {
 					clearInterval(refreshTimer);

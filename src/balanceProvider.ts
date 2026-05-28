@@ -9,6 +9,12 @@ export interface ProviderBalance {
 }
 
 export class BalanceProvider {
+	private secrets: vscode.SecretStorage;
+
+	constructor(secrets: vscode.SecretStorage) {
+		this.secrets = secrets;
+	}
+
 	async fetchAll(): Promise<ProviderBalance[]> {
 		const results: ProviderBalance[] = [];
 		const config = vscode.workspace.getConfiguration('aiBalance');
@@ -30,8 +36,16 @@ export class BalanceProvider {
 		return results;
 	}
 
+	private async getSecret(key: string): Promise<string | undefined> {
+		try {
+			return await this.secrets.get(key);
+		} catch {
+			return undefined;
+		}
+	}
+
 	private async fetchDeepSeek(config: vscode.WorkspaceConfiguration): Promise<ProviderBalance | null> {
-		const apiKey = config.get<string>('providers.deepseek.apiKey', '');
+		const apiKey = await this.getSecret('aiBalance.deepseek.apiKey');
 		const apiUrl = config.get<string>('providers.deepseek.apiUrl', 'https://api.deepseek.com');
 
 		if (!apiKey) {
@@ -64,7 +78,7 @@ export class BalanceProvider {
 	}
 
 	private async fetchOpenRouter(config: vscode.WorkspaceConfiguration): Promise<ProviderBalance | null> {
-		const apiKey = config.get<string>('providers.openrouter.apiKey', '');
+		const apiKey = await this.getSecret('aiBalance.openrouter.apiKey');
 		const apiUrl = config.get<string>('providers.openrouter.apiUrl', 'https://openrouter.ai/api');
 
 		if (!apiKey) {

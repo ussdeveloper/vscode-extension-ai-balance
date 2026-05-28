@@ -85,7 +85,7 @@ export class StatusBarManager implements vscode.Disposable {
 		}
 
 		this.statusBarItem.text = parts.join(' ');
-		this.statusBarItem.tooltip = tooltipLines.join('\n') + '\n---\nClick to open settings';
+		this.statusBarItem.tooltip = tooltipLines.join('\n') + '\n---\nClick to open settings\nUse "AI Balance: Set ... Key" commands to add API keys';
 	}
 
 	private shortName(name: string): string {
