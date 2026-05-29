@@ -36,6 +36,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.BalanceProvider = void 0;
 const vscode = __importStar(require("vscode"));
 class BalanceProvider {
+    secrets;
+    constructor(secrets) {
+        this.secrets = secrets;
+    }
     async fetchAll() {
         const results = [];
         const config = vscode.workspace.getConfiguration('aiBalance');
@@ -55,8 +59,16 @@ class BalanceProvider {
         }
         return results;
     }
+    async getSecret(key) {
+        try {
+            return await this.secrets.get(key);
+        }
+        catch {
+            return undefined;
+        }
+    }
     async fetchDeepSeek(config) {
-        const apiKey = config.get('providers.deepseek.apiKey', '');
+        const apiKey = await this.getSecret('aiBalance.deepseek.apiKey');
         const apiUrl = config.get('providers.deepseek.apiUrl', 'https://api.deepseek.com');
         if (!apiKey) {
             return { name: 'DeepSeek', key: 'deepseek', balance: null, total: null, error: 'No API key' };
@@ -84,7 +96,7 @@ class BalanceProvider {
         }
     }
     async fetchOpenRouter(config) {
-        const apiKey = config.get('providers.openrouter.apiKey', '');
+        const apiKey = await this.getSecret('aiBalance.openrouter.apiKey');
         const apiUrl = config.get('providers.openrouter.apiUrl', 'https://openrouter.ai/api');
         if (!apiKey) {
             return { name: 'OpenRouter', key: 'openrouter', balance: null, total: null, error: 'No API key' };

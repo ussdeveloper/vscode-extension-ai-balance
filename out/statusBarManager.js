@@ -58,19 +58,22 @@ class StatusBarManager {
         }
     }
     async refresh() {
-        const show = vscode.workspace.getConfiguration('aiBalance').get('display.showInStatusBar', true);
+        const config = vscode.workspace.getConfiguration('aiBalance');
+        const show = config.get('display.showInStatusBar', true);
         if (!show) {
             this.statusBarItem.hide();
             return;
         }
         this.statusBarItem.show();
-        this.statusBarItem.text = '$(sync~spin) AI...';
+        const color = config.get('display.color', '#D4A017');
+        this.statusBarItem.color = color && color.trim() ? color : undefined;
+        this.statusBarItem.text = '$(sync~spin) ...';
         this.statusBarItem.tooltip = 'Fetching balances...';
         const results = await this.provider.fetchAll();
         const targetCurrency = vscode.workspace.getConfiguration('aiBalance').get('display.currency', 'USD');
         const currencySymbol = currencyConverter_js_1.CurrencyConverter.getSymbol(targetCurrency);
         if (results.length === 0) {
-            this.statusBarItem.text = '$(warning) AI: No providers';
+            this.statusBarItem.text = '$(warning) No providers';
             this.statusBarItem.tooltip = 'Enable providers and add API keys in settings';
             return;
         }
@@ -78,21 +81,21 @@ class StatusBarManager {
         const tooltipLines = [];
         for (const r of results) {
             if (r.error && r.balance === null) {
-                parts.push(`${this.shortName(r.name)}:$(warning)`);
+                parts.push(`${this.shortName(r.name)} $(warning)`);
                 tooltipLines.push(`${r.name}: ${r.error}`);
             }
             else if (r.balance !== null) {
                 if (r.key === 'openrouter' && r.total !== null && r.total > 0) {
                     // OpenRouter with budget: show percentage used
                     const pct = Math.min((r.balance / r.total) * 100, 100).toFixed(1);
-                    parts.push(`${this.shortName(r.name)}:${pct}%`);
+                    parts.push(`${this.shortName(r.name)} ${pct}%`);
                     tooltipLines.push(`${r.name}: $${r.balance.toFixed(4)} used of $${r.total.toFixed(4)} budget (${pct}%)`);
                 }
                 else {
                     // DeepSeek or pay-as-you-go: show amount
                     const converted = await this.currencyConverter.convert(r.balance, targetCurrency);
                     const formatted = this.formatBalance(converted.amount, currencySymbol);
-                    parts.push(`${this.shortName(r.name)}:${formatted}`);
+                    parts.push(`${this.shortName(r.name)} ${formatted}`);
                     const usdStr = `$${r.balance.toFixed(4)}`;
                     const convStr = `${currencySymbol}${converted.amount.toFixed(4)}`;
                     if (targetCurrency !== 'USD') {
@@ -109,7 +112,7 @@ class StatusBarManager {
             }
         }
         this.statusBarItem.text = parts.join(' ');
-        this.statusBarItem.tooltip = tooltipLines.join('\n') + '\n---\nClick to refresh';
+        this.statusBarItem.tooltip = tooltipLines.join('\n') + '\n---\nClick to open settings\nUse "AI Balance: Set ... Key" commands to add API keys';
     }
     shortName(name) {
         switch (name) {

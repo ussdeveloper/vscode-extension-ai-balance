@@ -93,6 +93,11 @@
           "type": "number",
           "default": 300,
           "description": "Auto-refresh interval in seconds (0 to disable)"
+        },
+        "aiBalance.display.color": {
+          "type": "string",
+          "default": "#D4A017",
+          "description": "Text color for the status bar balance display (CSS color or empty for default)"
         }
       }
     }
