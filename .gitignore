@@ -1,3 +1,5 @@
 node_modules
 /.thecoder
 /.github
+git-error-*.txt
+*.vsix

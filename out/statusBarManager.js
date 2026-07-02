@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.StatusBarManager = void 0;
 const vscode = __importStar(require("vscode"));
 const currencyConverter_js_1 = require("./currencyConverter.js");
+const peakUtils_js_1 = require("./peakUtils.js");
 class StatusBarManager {
     statusBarItem;
     provider;
@@ -77,7 +78,9 @@ class StatusBarManager {
             this.statusBarItem.tooltip = 'Enable providers and add API keys in settings';
             return;
         }
-        const parts = [];
+        const isPeak = (0, peakUtils_js_1.isDeepSeekPeakHours)();
+        const peakIndicator = isPeak ? '🔴' : '🟢';
+        const parts = [peakIndicator];
         const tooltipLines = [];
         for (const r of results) {
             if (r.error && r.balance === null) {
@@ -112,7 +115,13 @@ class StatusBarManager {
             }
         }
         this.statusBarItem.text = parts.join(' ');
-        this.statusBarItem.tooltip = tooltipLines.join('\n') + '\n---\nClick to open settings\nUse "AI Balance: Set ... Key" commands to add API keys';
+        const peakInfo = isPeak
+            ? '🔴 DeepSeek: PEAK HOURS (2× cena)'
+            : '🟢 DeepSeek: standardowa cena';
+        this.statusBarItem.tooltip = tooltipLines.join('\n') +
+            '\n---\n' + peakInfo +
+            '\n' + (0, peakUtils_js_1.getPeakHoursDescription)().split('\n').slice(1).join('\n') +
+            '\n---\nClick to open settings\nUse "AI Balance: Set ... Key" commands to add API keys';
     }
     shortName(name) {
         switch (name) {

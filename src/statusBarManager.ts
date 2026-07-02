@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { BalanceProvider, ProviderBalance } from './balanceProvider.js';
 import { CurrencyConverter } from './currencyConverter.js';
+import { isDeepSeekPeakHours, getPeakHoursDescription } from './peakUtils.js';
 
 export class StatusBarManager implements vscode.Disposable {
 	private statusBarItem: vscode.StatusBarItem;
@@ -53,7 +54,9 @@ export class StatusBarManager implements vscode.Disposable {
 			return;
 		}
 
-		const parts: string[] = [];
+		const isPeak = isDeepSeekPeakHours();
+		const peakIndicator = isPeak ? '🔴' : '🟢';
+		const parts: string[] = [peakIndicator];
 		const tooltipLines: string[] = [];
 
 		for (const r of results) {
@@ -89,7 +92,13 @@ export class StatusBarManager implements vscode.Disposable {
 		}
 
 		this.statusBarItem.text = parts.join(' ');
-		this.statusBarItem.tooltip = tooltipLines.join('\n') + '\n---\nClick to open settings\nUse "AI Balance: Set ... Key" commands to add API keys';
+		const peakInfo = isPeak
+			? '🔴 DeepSeek: PEAK HOURS (2× cena)'
+			: '🟢 DeepSeek: standardowa cena';
+		this.statusBarItem.tooltip = tooltipLines.join('\n') +
+			'\n---\n' + peakInfo +
+			'\n' + getPeakHoursDescription().split('\n').slice(1).join('\n') +
+			'\n---\nClick to open settings\nUse "AI Balance: Set ... Key" commands to add API keys';
 	}
 
 	private shortName(name: string): string {
