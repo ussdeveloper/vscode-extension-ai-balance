@@ -1,12 +1,12 @@
 {
   "version": 1,
   "createdAt": "2026-05-27T22:47:06.975Z",
-  "updatedAt": "2026-05-29T14:07:35.870Z",
+  "updatedAt": "2026-05-31T08:19:02.914Z",
   "entries": [
     {
       "id": "m_mponma3k_7qij",
       "createdAt": "2026-05-27T22:47:07.424Z",
-      "updatedAt": "2026-05-29T14:07:35.783Z",
+      "updatedAt": "2026-05-31T08:17:31.233Z",
       "title": "Project overview: ai-balance",
       "content": "# ai-balance\n\nStructured project overview (auto-profiled by TheCoder memory-tank).\n\n## Identity\n- Path: `c:\\Users\\sulaco\\Desktop\\Projects\\vscode-extensions\\ai-balance`\n- Editor: TheCoder 1.122.0\n- Project: **ai-balance** v0.2.0\n- Git branch: `main`\n\n## Key manifest files\n- tsconfig.json\n\n## npm scripts\n```\ncompile: tsc -p tsconfig.json\npackage: vsce package --allow-missing-repository\nwatch: tsc -watch -p tsconfig.json\n```\n\n## README excerpt\n\n# AI Balance\r",
       "category": "fact",
@@ -20,7 +20,7 @@
       "meta": {
         "kind": "projectContext",
         "workspace": "c:\\Users\\sulaco\\Desktop\\Projects\\vscode-extensions\\ai-balance",
-        "profiledAt": "2026-05-29T14:07:35.783Z"
+        "profiledAt": "2026-05-31T08:17:31.233Z"
       }
     },
     {
@@ -121,9 +121,9 @@
     {
       "id": "m_mponyec8_87tx",
       "createdAt": "2026-05-27T22:56:32.792Z",
-      "updatedAt": "2026-05-29T14:07:35.792Z",
+      "updatedAt": "2026-05-31T08:17:31.251Z",
       "title": "Project structure: ai-balance",
-      "content": "# Directory layout (depth 2)\n\nUse this to locate modules, configs, and assets without re-scanning the tree.\n\n```\n.github/\n.github/agents/\n.github/agents/ai-balance-manager.agent.md\n.github/skills/\n.github/skills/ai-providers/\n.github/skills/vscode-extension-dev/\n.thecoder/\n.thecoder/memory-tank/\n.thecoder/memory-tank/memory.json\nai-balance-0.1.0.vsix\nai-balance-0.2.0.vsix\nicons/\nicons/deepseek.png\nicons/deepseek.svg\nicons/openrouter.png\nicons/openrouter.svg\npackage-lock.json\npackage.json\nREADME.md\nsrc/\nsrc/balanceProvider.ts\nsrc/currencyConverter.ts\nsrc/extension.ts\nsrc/statusBarManager.ts\ntsconfig.json\n```",
+      "content": "# Directory layout (depth 2)\n\nUse this to locate modules, configs, and assets without re-scanning the tree.\n\n```\n.github/\n.github/agents/\n.github/agents/ai-balance-manager.agent.md\n.github/skills/\n.github/skills/ai-providers/\n.github/skills/vscode-extension-dev/\n.thecoder/\n.thecoder/memory-tank/\n.thecoder/memory-tank/memory.json\nai-balance-0.1.0.vsix\nai-balance-0.2.0.vsix\ngit-error-1780064179715.txt\nicons/\nicons/deepseek.png\nicons/deepseek.svg\nicons/openrouter.png\nicons/openrouter.svg\npackage-lock.json\npackage.json\nREADME.md\nsrc/\nsrc/balanceProvider.ts\nsrc/currencyConverter.ts\nsrc/extension.ts\nsrc/statusBarManager.ts\ntsconfig.json\n```",
       "category": "architecture",
       "tags": [
         "project",
@@ -135,13 +135,13 @@
       "meta": {
         "kind": "projectStructure",
         "workspace": "c:\\Users\\sulaco\\Desktop\\Projects\\vscode-extensions\\ai-balance",
-        "profiledAt": "2026-05-29T14:07:35.792Z"
+        "profiledAt": "2026-05-31T08:17:31.251Z"
       }
     },
     {
       "id": "m_mponyecr_bsoz",
       "createdAt": "2026-05-27T22:56:32.811Z",
-      "updatedAt": "2026-05-29T14:07:35.814Z",
+      "updatedAt": "2026-05-31T08:17:31.285Z",
       "title": "Tech stack: ai-balance",
       "content": "# Dependencies & stack\n\n- @types/node@^25.9.1\n- @types/vscode@^1.85.0\n- @vscode/vsce@^3.9.1\n- typescript@^6.0.3",
       "category": "architecture",
@@ -155,7 +155,7 @@
       "meta": {
         "kind": "techStack",
         "workspace": "c:\\Users\\sulaco\\Desktop\\Projects\\vscode-extensions\\ai-balance",
-        "profiledAt": "2026-05-29T14:07:35.814Z"
+        "profiledAt": "2026-05-31T08:17:31.285Z"
       }
     },
     {
@@ -358,9 +358,9 @@
     {
       "id": "m_mpp9dc45_lvww",
       "createdAt": "2026-05-28T08:56:01.684Z",
-      "updatedAt": "2026-05-29T14:07:35.870Z",
+      "updatedAt": "2026-05-31T08:17:31.315Z",
       "title": "Recent git history: main",
-      "content": "# Recent commits (from git reflog)\nBranch: `main`\n1. commit: ignore .github directory in gitignore\n2. commit: add vscode-extension-dev skill with API references, packaging, and activation events\n3. commit: add ai-providers skill with comprehensive provider knowledge\n4. commit: v0.2.1: click to set API keys when missing, smart configure flow\n5. commit: v0.2.0: secure API keys, currency conversion, custom agent\n6. commit (initial): Initial commit: add AI Balance VS Code extension source, build output, and project config",
+      "content": "# Recent commits (from git reflog)\nBranch: `main`\n1. commit: v0.2.1: secure API keys via SecretStorage, smart configure flow, status bar polish\n2. commit: ignore .github directory in gitignore\n3. commit: add vscode-extension-dev skill with API references, packaging, and activation events\n4. commit: add ai-providers skill with comprehensive provider knowledge\n5. commit: v0.2.1: click to set API keys when missing, smart configure flow\n6. commit: v0.2.0: secure API keys, currency conversion, custom agent\n7. commit (initial): Initial commit: add AI Balance VS Code extension source, build output, and project config",
       "category": "progress",
       "tags": [
         "git",
@@ -372,7 +372,7 @@
       "meta": {
         "kind": "gitTimeline",
         "branch": "main",
-        "profiledAt": "2026-05-29T14:07:35.870Z"
+        "profiledAt": "2026-05-31T08:17:31.315Z"
       }
     },
     {
@@ -557,6 +557,68 @@
         "kind": "conversationTranscript",
         "reason": "idle",
         "turnCount": 21
+      }
+    },
+    {
+      "id": "m_mpr0d8he_gz6w",
+      "createdAt": "2026-05-29T14:19:32.786Z",
+      "updatedAt": "2026-05-29T14:19:32.786Z",
+      "title": "Milestone: v0.2.1: secure API keys via SecretStorage, smart configure flow, status bar poli…",
+      "content": "Extracted from chat (2026-05-29T14:15:57.262Z, deepseek-v4-flash):\n\nv0.2.1: secure API keys via SecretStorage, smart configure flow, status bar polish",
+      "category": "milestone",
+      "tags": [
+        "conversation",
+        "auto",
+        "extracted",
+        "milestone",
+        "idle"
+      ],
+      "links": [],
+      "meta": {
+        "kind": "conversationDigest",
+        "reason": "idle",
+        "turnCount": 20
+      }
+    },
+    {
+      "id": "m_mptidc34_01ez",
+      "createdAt": "2026-05-31T08:19:02.896Z",
+      "updatedAt": "2026-05-31T08:19:02.896Z",
+      "title": "TODO: The user's request is to install the \"ai balance\" extension in VS Code Insiders …",
+      "content": "Extracted from chat (2026-05-31T08:17:55.374Z, deepseek-v4-flash):\n\nThe user's request is to install the \"ai balance\" extension in VS Code Insiders on this computer. The agent has only read a couple of files so far — this is a single-step installation task, not multi-step work. No todo list is needed.",
+      "category": "todo",
+      "tags": [
+        "conversation",
+        "auto",
+        "extracted",
+        "todo",
+        "idle"
+      ],
+      "links": [],
+      "meta": {
+        "kind": "conversationDigest",
+        "reason": "idle",
+        "turnCount": 9
+      }
+    },
+    {
+      "id": "m_mptidc3m_0nan",
+      "createdAt": "2026-05-31T08:19:02.914Z",
+      "updatedAt": "2026-05-31T08:19:02.914Z",
+      "title": "Conversation transcript (idle) — 9 turns",
+      "content": "### 2026-05-31T08:17:49.821Z — deepseek-v4-flash\n*tokens: in=267, out=8*\n\n**Assistant:**\n\nInstall AI Balance in VS Code Insiders\n\n---\n\n### 2026-05-31T08:17:50.563Z — deepseek-v4-flash\n*tokens: in=252, out=78*\n\n**Assistant:**\n\n[\n  \"Spinning up the compiler\",\n  \"Assembling the building blocks\",\n  \"Connecting the logic dots\",\n  \"Polishing the syntax\",\n  \"Weaving the code together\",\n  \"Tuning the functions\",\n  \"Mapping out the solution\",\n  \"Compiling your request\",\n  \"Laying down the framework\",\n  \"Finalizing the output\"\n]\n\n---\n\n### 2026-05-31T08:17:51.179Z — deepseek-v4-flash\n*tokens: in=252, out=75*\n\n**Assistant:**\n\n[\n  \"Sharpening the code logic\",\n  \"Polishing your code\",\n  \"Rewriting the solution\",\n  \"Tuning the algorithms\",\n  \"Refining the logic flow\",\n  \"Optimizing the code\",\n  \"Weaving new code\",\n  \"Adjusting the gears\",\n  \"Smoothing the edges\",\n  \"Finalizing the edits\"\n]\n\n---\n\n### 2026-05-31T08:17:51.202Z — deepseek-v4-flash\n*tokens: in=18799, out=139*\n\n**Assistant:**\n\nLet me first understand the project structure and build configuration. \n\n---\n\n### 2026-05-31T08:17:53.133Z — deepseek-v4-flash\n*tokens: in=19007, out=196*\n\n---\n\n### 2026-05-31T08:17:55.374Z — deepseek-v4-flash\n*tokens: in=2474, out=53*\n\n**Assistant:**\n\nThe user's request is to install the \"ai balance\" extension in VS Code Insiders on this computer. The agent has only read a couple of files so far — this is a single-step installation task, not multi-step work. No todo list is needed.\n\n---\n\n### 2026-05-31T08:17:55.878Z — deepseek-v4-flash\n*tokens: in=19917, out=191*\n\n**Assistant:**\n\nWidzę, że projekt jest już skompilowany (są pliki w `out/`). Sprawdzę, czy mamy już zbudowany plik `.vsix`. \n\n---\n\n### 2026-05-31T08:17:58.549Z — deepseek-v4-flash\n*tokens: in=20777, out=184*\n\n**Assistant:**\n\nMamy już plik `ai-balance-0.2.0.vsix`. Zainstaluję go w VS Code Insiders. \n\n---\n\n### 2026-05-31T08:18:02.879Z — deepseek-v4-flash\n*tokens: in=21068, out=171*\n\n**Assistant:**\n\nRozszerzenie **AI Balance** w wersji **0.2.0** zostało pomyślnie zainstalowane w **VS Code Insiders**. \n\nPo restarcie VS Code Insiders rozszerzenie będzie aktywne i pojawi się w status barze (jeśli skonfigurujesz klucze API). Aby skonfigurować:\n\n1. **Ustaw klucz DeepSeek**: `Ctrl+Shift+P` → `AI Balance: Set DeepSeek API Key`\n2. **Ustaw klucz OpenRouter**: `Ctrl+Shift+P` → `AI Balance: Set OpenRouter API Key`\n3. Możesz też zmienić walutę wyświetlania w ustawieniach (`aiBalance.display.currency`).\n\n---\n",
+      "category": "progress",
+      "tags": [
+        "conversation",
+        "auto",
+        "transcript",
+        "idle"
+      ],
+      "links": [],
+      "meta": {
+        "kind": "conversationTranscript",
+        "reason": "idle",
+        "turnCount": 9
       }
     }
   ]

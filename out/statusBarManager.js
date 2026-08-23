@@ -79,6 +79,7 @@ class StatusBarManager {
             return;
         }
         const isPeak = (0, peakUtils_js_1.isDeepSeekPeakHours)();
+        const isWeekend = (0, peakUtils_js_1.isDeepSeekWeekend)();
         const peakIndicator = isPeak ? '🔴' : '🟢';
         const parts = [peakIndicator];
         const tooltipLines = [];
@@ -117,7 +118,9 @@ class StatusBarManager {
         this.statusBarItem.text = parts.join(' ');
         const peakInfo = isPeak
             ? '🔴 DeepSeek: PEAK HOURS (2× cena)'
-            : '🟢 DeepSeek: standardowa cena';
+            : isWeekend
+                ? '🟢 DeepSeek: weekend — cały dzień poza szczytem'
+                : '🟢 DeepSeek: standardowa cena';
         this.statusBarItem.tooltip = tooltipLines.join('\n') +
             '\n---\n' + peakInfo +
             '\n' + (0, peakUtils_js_1.getPeakHoursDescription)().split('\n').slice(1).join('\n') +

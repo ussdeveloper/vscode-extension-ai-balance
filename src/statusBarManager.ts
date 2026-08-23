@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { BalanceProvider, ProviderBalance } from './balanceProvider.js';
 import { CurrencyConverter } from './currencyConverter.js';
-import { isDeepSeekPeakHours, getPeakHoursDescription } from './peakUtils.js';
+import { isDeepSeekPeakHours, isDeepSeekWeekend, getPeakHoursDescription } from './peakUtils.js';
 
 export class StatusBarManager implements vscode.Disposable {
 	private statusBarItem: vscode.StatusBarItem;
@@ -55,6 +55,7 @@ export class StatusBarManager implements vscode.Disposable {
 		}
 
 		const isPeak = isDeepSeekPeakHours();
+		const isWeekend = isDeepSeekWeekend();
 		const peakIndicator = isPeak ? '🔴' : '🟢';
 		const parts: string[] = [peakIndicator];
 		const tooltipLines: string[] = [];
@@ -94,7 +95,9 @@ export class StatusBarManager implements vscode.Disposable {
 		this.statusBarItem.text = parts.join(' ');
 		const peakInfo = isPeak
 			? '🔴 DeepSeek: PEAK HOURS (2× cena)'
-			: '🟢 DeepSeek: standardowa cena';
+			: isWeekend
+				? '🟢 DeepSeek: weekend — cały dzień poza szczytem'
+				: '🟢 DeepSeek: standardowa cena';
 		this.statusBarItem.tooltip = tooltipLines.join('\n') +
 			'\n---\n' + peakInfo +
 			'\n' + getPeakHoursDescription().split('\n').slice(1).join('\n') +
