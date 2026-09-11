@@ -10,7 +10,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	console.log('AI Balance extension activating...');
 
 	balanceProvider = new BalanceProvider(context.secrets);
-	statusBarManager = new StatusBarManager(balanceProvider);
+	statusBarManager = new StatusBarManager(balanceProvider, context);
 
 	// Register commands
 	const refreshCmd = vscode.commands.registerCommand('aiBalance.refresh', () => {

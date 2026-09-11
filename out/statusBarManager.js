@@ -37,17 +37,24 @@ exports.StatusBarManager = void 0;
 const vscode = __importStar(require("vscode"));
 const currencyConverter_js_1 = require("./currencyConverter.js");
 const peakUtils_js_1 = require("./peakUtils.js");
+const pricing_js_1 = require("./pricing.js");
 class StatusBarManager {
     statusBarItem;
     provider;
     currencyConverter;
-    constructor(provider) {
+    extensionContext;
+    tickTimer;
+    snapshot = null;
+    constructor(provider, context) {
         this.provider = provider;
+        this.extensionContext = context;
         this.currencyConverter = new currencyConverter_js_1.CurrencyConverter();
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
         this.statusBarItem.command = 'aiBalance.configure';
         this.statusBarItem.tooltip = 'AI Balance — click to open settings';
         this.updateVisibility();
+        // Live countdown tick — pure local re-render from system time, no API calls
+        this.tickTimer = setInterval(() => this.render(), 30_000);
     }
     updateVisibility() {
         const show = vscode.workspace.getConfiguration('aiBalance').get('display.showInStatusBar', true);
@@ -74,32 +81,30 @@ class StatusBarManager {
         const targetCurrency = vscode.workspace.getConfiguration('aiBalance').get('display.currency', 'USD');
         const currencySymbol = currencyConverter_js_1.CurrencyConverter.getSymbol(targetCurrency);
         if (results.length === 0) {
+            this.snapshot = null;
             this.statusBarItem.text = '$(warning) No providers';
             this.statusBarItem.tooltip = 'Enable providers and add API keys in settings';
             return;
         }
-        const isPeak = (0, peakUtils_js_1.isDeepSeekPeakHours)();
-        const isWeekend = (0, peakUtils_js_1.isDeepSeekWeekend)();
-        const peakIndicator = isPeak ? '🔴' : '🟢';
-        const parts = [peakIndicator];
+        const providerParts = [];
         const tooltipLines = [];
         for (const r of results) {
             if (r.error && r.balance === null) {
-                parts.push(`${this.shortName(r.name)} $(warning)`);
+                providerParts.push(`${this.shortName(r.name)} $(warning)`);
                 tooltipLines.push(`${r.name}: ${r.error}`);
             }
             else if (r.balance !== null) {
                 if (r.key === 'openrouter' && r.total !== null && r.total > 0) {
                     // OpenRouter with budget: show percentage used
                     const pct = Math.min((r.balance / r.total) * 100, 100).toFixed(1);
-                    parts.push(`${this.shortName(r.name)} ${pct}%`);
+                    providerParts.push(`${this.shortName(r.name)} ${pct}%`);
                     tooltipLines.push(`${r.name}: $${r.balance.toFixed(4)} used of $${r.total.toFixed(4)} budget (${pct}%)`);
                 }
                 else {
                     // DeepSeek or pay-as-you-go: show amount
                     const converted = await this.currencyConverter.convert(r.balance, targetCurrency);
                     const formatted = this.formatBalance(converted.amount, currencySymbol);
-                    parts.push(`${this.shortName(r.name)} ${formatted}`);
+                    providerParts.push(`${this.shortName(r.name)} ${formatted}`);
                     const usdStr = `$${r.balance.toFixed(4)}`;
                     const convStr = `${currencySymbol}${converted.amount.toFixed(4)}`;
                     if (targetCurrency !== 'USD') {
@@ -115,16 +120,9 @@ class StatusBarManager {
                 }
             }
         }
-        this.statusBarItem.text = parts.join(' ');
-        const peakInfo = isPeak
-            ? '🔴 DeepSeek: PEAK HOURS (2× cena)'
-            : isWeekend
-                ? '🟢 DeepSeek: weekend — cały dzień poza szczytem'
-                : '🟢 DeepSeek: standardowa cena';
-        this.statusBarItem.tooltip = tooltipLines.join('\n') +
-            '\n---\n' + peakInfo +
-            '\n' + (0, peakUtils_js_1.getPeakHoursDescription)().split('\n').slice(1).join('\n') +
-            '\n---\nClick to open settings\nUse "AI Balance: Set ... Key" commands to add API keys';
+        const dailyUsageLines = await this.computeDailyUsage(results, targetCurrency, currencySymbol);
+        this.snapshot = { providerParts, tooltipLines, dailyUsageLines };
+        this.render();
     }
     shortName(name) {
         switch (name) {
@@ -137,7 +135,85 @@ class StatusBarManager {
         // Show just the number without currency symbol
         return value.toFixed(2);
     }
+    /** Rebuilds status bar text + tooltip from the stored snapshot (runs on every tick). */
+    render() {
+        if (!this.snapshot) {
+            return;
+        }
+        const isPeak = (0, peakUtils_js_1.isDeepSeekPeakHours)();
+        const isWeekend = (0, peakUtils_js_1.isDeepSeekWeekend)();
+        const peakIndicator = isPeak ? '🔴' : '🟢';
+        const transition = (0, peakUtils_js_1.getNextPeakTransition)();
+        const countdown = (0, peakUtils_js_1.formatCountdown)(transition.minutes);
+        const targetTime = (0, peakUtils_js_1.formatTransitionTarget)(transition.at);
+        // Countdown right next to the peak dot, then provider balances
+        this.statusBarItem.text = [`${peakIndicator} ${countdown}`, ...this.snapshot.providerParts].join(' ');
+        const peakInfo = isPeak
+            ? '🔴 DeepSeek: PEAK HOURS (2× cena)'
+            : isWeekend
+                ? '🟢 DeepSeek: weekend — cały dzień poza szczytem'
+                : '🟢 DeepSeek: standardowa cena';
+        const countdownInfo = transition.next === 'peak'
+            ? `⏳ Do najbliższego peak hours: ${countdown} (${targetTime})`
+            : `⏳ Do końca peak hours (off-peak): ${countdown} (${targetTime})`;
+        const sections = [...this.snapshot.tooltipLines];
+        if (this.snapshot.dailyUsageLines.length > 0) {
+            sections.push('---', ...this.snapshot.dailyUsageLines);
+        }
+        sections.push('---', peakInfo, countdownInfo, (0, peakUtils_js_1.getPeakHoursDescription)().split('\n').slice(1).join('\n'), '---', ...(0, pricing_js_1.getModelPricingLines)(), '---', 'Click to open settings', 'Use "AI Balance: Set ... Key" commands to add API keys');
+        this.statusBarItem.tooltip = sections.join('\n');
+    }
+    /** Local (system) date key, e.g. "2026-09-11". */
+    static localDateKey(date) {
+        const y = date.getFullYear();
+        const m = (date.getMonth() + 1).toString().padStart(2, '0');
+        const d = date.getDate().toString().padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+    /**
+     * Approximate cost of today's usage (system local day): compares the current
+     * balance/usage with the first reading of the day, persisted in globalState.
+     * DeepSeek exposes no usage API, so its value is an estimate (top-ups can
+     * skew it); OpenRouter uses its cumulative `usage` counter.
+     */
+    async computeDailyUsage(results, targetCurrency, currencySymbol) {
+        const today = StatusBarManager.localDateKey(new Date());
+        const lines = [];
+        for (const r of results) {
+            if (r.balance === null) {
+                continue;
+            }
+            const useUsage = typeof r.usage === 'number';
+            const metric = useUsage ? r.usage : r.balance;
+            const stateKey = `aiBalance.dailyBaseline.${r.key}`;
+            const stored = this.extensionContext.globalState.get(stateKey);
+            let spentUsd = 0;
+            if (stored && stored.date === today) {
+                // usage grows with spend, balance shrinks — normalise both to "spent"
+                const delta = useUsage ? metric - stored.metric : stored.metric - metric;
+                spentUsd = Math.max(delta, 0);
+            }
+            else {
+                await this.extensionContext.globalState.update(stateKey, { date: today, metric });
+            }
+            if (targetCurrency !== 'USD') {
+                const conv = await this.currencyConverter.convert(spentUsd, targetCurrency);
+                lines.push(`📊 ${r.name} — dziś: ~$${spentUsd.toFixed(4)} (${currencySymbol}${conv.amount.toFixed(4)})`);
+            }
+            else {
+                lines.push(`📊 ${r.name} — dziś: ~$${spentUsd.toFixed(4)}`);
+            }
+        }
+        if (lines.length > 0) {
+            lines.unshift('Koszt użycia dzisiaj (szacunek od pierwszego odczytu dnia):');
+        }
+        return lines;
+    }
     dispose() {
+        if (this.tickTimer) {
+            clearInterval(this.tickTimer);
+            this.tickTimer = undefined;
+        }
         this.statusBarItem.dispose();
     }
 }

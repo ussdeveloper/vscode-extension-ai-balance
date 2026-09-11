@@ -21,6 +21,8 @@ See [./references/providers.md](./references/providers.md) for detailed provider
 See [./references/models.md](./references/models.md) for model listings per provider.
 See [./references/api-patterns.md](./references/api-patterns.md) for common API patterns.
 
+> **DeepSeek**: All DeepSeek API data (endpoints, models, pricing, rate limits) can be found at https://api-docs.deepseek.com/
+
 ## Quick Reference: Supported Providers
 
 | Provider | API Format | Auth | Base URL |

@@ -5,6 +5,8 @@ export interface ProviderBalance {
 	key: string;
 	balance: number | null;
 	total: number | null;
+	/** Cumulative usage in USD when the provider exposes it (e.g. OpenRouter). */
+	usage?: number;
 	error?: string;
 }
 
@@ -104,7 +106,8 @@ export class BalanceProvider {
 						name: 'OpenRouter',
 						key: 'openrouter',
 						balance,
-						total: null
+						total: null,
+						usage: d.total_usage ?? 0
 					};
 				}
 			}
@@ -130,7 +133,8 @@ export class BalanceProvider {
 					name: 'OpenRouter',
 					key: 'openrouter',
 					balance,
-					total: null
+					total: null,
+					usage
 				};
 			}
 

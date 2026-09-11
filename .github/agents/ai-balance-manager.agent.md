@@ -17,16 +17,19 @@ ai-balance/
     ├── extension.ts          # Activation, commands, config listener, timer
     ├── balanceProvider.ts    # DeepSeek + OpenRouter API fetchers
     ├── currencyConverter.ts  # USD conversion (open.er-api.com, 24h cache)
-    └── statusBarManager.ts   # Status bar display + tooltip
+    ├── peakUtils.ts          # Peak/off-peak hours, weekend rules, countdown
+    ├── pricing.ts            # DeepSeek model prices for the tooltip
+    └── statusBarManager.ts   # Status bar display + tooltip (countdown tick)
 ```
 
 ## Key Facts
-- **Portable VS Code path**: `C:\Users\sulaco\Desktop\portable`
-- **Install command**: `.\bin\thecoder.cmd --install-extension "<vsix-path>" --force`
+- **VS Code Insiders path**: `C:\Users\sulaco\AppData\Local\Programs\Microsoft VS Code Insiders`
+- **Install command**: `& "<insiders-dir>\bin\code-insiders.cmd" --install-extension "<vsix-path>" --force`
 - **Build**: `npx tsc -p tsconfig.json` then `npx vsce package --allow-missing-repository`
 - **API keys** are stored securely via VS Code SecretStorage (OS keychain), NOT in settings.json
 - **Settings prefix**: `aiBalance.*` (search `@aiBalance` in settings)
 - **Commands**: `aiBalance.refresh`, `aiBalance.configure`, `aiBalance.setDeepSeekKey`, `aiBalance.setOpenRouterKey`, `aiBalance.clearKeys`
+- **Daily usage estimate** persists a per-day baseline in `context.globalState` (`aiBalance.dailyBaseline.<provider>`)
 
 ## Constraints
 - DO NOT store API keys in settings.json — use SecretStorage (`context.secrets.store/get/delete`)
@@ -38,19 +41,21 @@ ai-balance/
 ## Build & Install Workflow
 1. Compile: `npx tsc -p tsconfig.json`
 2. Package: `npx vsce package --allow-missing-repository`
-3. Install: `cd C:\Users\sulaco\Desktop\portable; .\bin\thecoder.cmd --install-extension "<project-dir>/ai-balance-<version>.vsix" --force`
+3. Install: `& "C:\Users\sulaco\AppData\Local\Programs\Microsoft VS Code Insiders\bin\code-insiders.cmd" --install-extension "<project-dir>/ai-balance-<version>.vsix" --force`
 4. Reload VS Code window to activate changes
 
 ## API Endpoints
 - **DeepSeek**: `GET /user/balance` → `{ balance_infos: [{ total_balance: "12.34" }] }`
+- **DeepSeek API docs**: https://api-docs.deepseek.com/ — source of truth for DeepSeek endpoints, models and pricing
 - **OpenRouter credits**: `GET /api/v1/credits` → `{ data: { total_credits, total_usage } }`
 - **OpenRouter fallback**: `GET /api/v1/auth/key` → `{ data: { usage, limit } }`
 - **Exchange rates**: `GET https://open.er-api.com/v6/latest/USD` (free, cached 24h)
 
 ## Status Bar Display
 - Left-aligned, monochrome Codicon icons: `$(hubot)` for DeepSeek, `$(radio-tower)` for OpenRouter
+- Peak dot `🔴`/`🟢` followed by a live h:mm countdown to the next peak/off-peak switch (weekends off-peak; re-rendered every 30 s from system time, no API calls)
 - Click opens settings (`@aiBalance`) or prompts for API keys if missing
-- Tooltip shows detailed balance info
+- Tooltip: balances, today's estimated usage cost, DeepSeek model pricing (peak/off-peak), peak-hour details
 
 ## Provider Knowledge
 Use the `ai-providers` skill for comprehensive knowledge about AI model providers, their APIs, authentication methods, and model listings. Load with: `/ai-providers`

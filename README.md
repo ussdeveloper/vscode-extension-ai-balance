@@ -8,6 +8,9 @@ Shows DeepSeek and OpenRouter API balance in the VS Code status bar.
 ## Features
 
 - **Status bar display** — shows balances for DeepSeek and OpenRouter providers
+- **Peak-hours countdown** — 🔴/🟢 indicator with a live h:mm countdown to the next peak/off-peak switch (weekends are always off-peak)
+- **Daily usage estimate** — approximate cost of today's usage in the tooltip
+- **Model pricing in tooltip** — current DeepSeek price list per 1M tokens (peak & off-peak)
 - **Monochrome Codicon icons** — `$(hubot)` for DeepSeek, `$(radio-tower)` for OpenRouter
 - **Secure API key storage** — keys stored in OS keychain via VS Code SecretStorage API
 - **Currency conversion** — convert USD to EUR, PLN, GBP, JPY and more (via free open.er-api.com, cached 24h)
@@ -85,3 +88,5 @@ npm run package
 - Status bar only supports monochrome Codicon icons (no custom SVG/images)
 - Exchange rates cached for 24 hours to minimize API calls
 - DeepSeek balance endpoint may change — uses `/user/balance`
+- Daily usage cost is an estimate (balance difference since the first reading of the day; top-ups can skew it)
+- Model prices are informational and may change — see https://api-docs.deepseek.com/quick_start/pricing

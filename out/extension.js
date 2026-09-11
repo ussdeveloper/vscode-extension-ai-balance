@@ -44,7 +44,7 @@ let refreshTimer;
 async function activate(context) {
     console.log('AI Balance extension activating...');
     balanceProvider = new balanceProvider_js_1.BalanceProvider(context.secrets);
-    statusBarManager = new statusBarManager_js_1.StatusBarManager(balanceProvider);
+    statusBarManager = new statusBarManager_js_1.StatusBarManager(balanceProvider, context);
     // Register commands
     const refreshCmd = vscode.commands.registerCommand('aiBalance.refresh', () => {
         statusBarManager.refresh();

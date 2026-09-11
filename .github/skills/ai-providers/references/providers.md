@@ -7,6 +7,7 @@ Detailed information about each AI provider's API, authentication, and balance e
 | Property | Value |
 |---|---|
 | Website | https://deepseek.com |
+| API Docs | https://api-docs.deepseek.com/ |
 | API Base URL | `https://api.deepseek.com` |
 | API Format | OpenAI-compatible |
 | Auth Header | `Authorization: Bearer {key}` |

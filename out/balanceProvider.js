@@ -119,7 +119,8 @@ class BalanceProvider {
                         name: 'OpenRouter',
                         key: 'openrouter',
                         balance,
-                        total: null
+                        total: null,
+                        usage: d.total_usage ?? 0
                     };
                 }
             }
@@ -142,7 +143,8 @@ class BalanceProvider {
                     name: 'OpenRouter',
                     key: 'openrouter',
                     balance,
-                    total: null
+                    total: null,
+                    usage
                 };
             }
             return { name: 'OpenRouter', key: 'openrouter', balance: null, total: null, error: 'Unexpected response' };
