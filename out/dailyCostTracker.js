@@ -209,6 +209,45 @@ class DailyCostTracker {
         return raw;
     }
     /**
+     * Reads the shared file plus any cloud conflict copies in the same folder
+     * (OneDrive: `daily-costs-<PC>.json`, Dropbox: `daily-costs (conflicted
+     * copy).json`, Google Drive: `daily-costs (1).json`) and merges them.
+     */
+    async readRemoteStore(file) {
+        const candidates = [file];
+        try {
+            const dir = path.dirname(file);
+            const base = path.parse(file);
+            const entries = await fs.readdir(dir);
+            for (const entry of entries) {
+                if (entry === base.base || entry.endsWith('.tmp')) {
+                    continue;
+                }
+                if (!entry.toLowerCase().endsWith('.json') || !entry.startsWith(base.name)) {
+                    continue;
+                }
+                candidates.push(path.join(dir, entry));
+            }
+        }
+        catch {
+            // Directory does not exist yet — main file will be created on write
+        }
+        let merged = emptyStore();
+        for (const candidate of candidates) {
+            try {
+                const text = await fs.readFile(candidate, 'utf8');
+                const parsed = JSON.parse(text);
+                if (parsed && parsed.version === 2 && parsed.providers) {
+                    merged = mergeStores(merged, parsed);
+                }
+            }
+            catch {
+                // Missing/corrupt file — skip it
+            }
+        }
+        return merged;
+    }
+    /**
      * Merges local records with the shared file (if configured) and writes the
      * merged result back. Uses write-to-temp + rename to minimise partial reads.
      */
@@ -218,17 +257,7 @@ class DailyCostTracker {
             return;
         }
         try {
-            let remote = emptyStore();
-            try {
-                const text = await fs.readFile(file, 'utf8');
-                const parsed = JSON.parse(text);
-                if (parsed && parsed.version === 2 && parsed.providers) {
-                    remote = parsed;
-                }
-            }
-            catch {
-                // Missing/corrupt file — start from local data
-            }
+            const remote = await this.readRemoteStore(file);
             const merged = mergeStores(local, remote);
             await fs.mkdir(path.dirname(file), { recursive: true });
             const tmp = `${file}.${process.pid}.tmp`;

@@ -2,7 +2,7 @@
   "name": "ai-balance",
   "displayName": "AI Balance",
   "description": "Shows DeepSeek and OpenRouter API balance in the status bar",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "publisher": "sulaco",
   "icon": "icons/deepseek.png",
   "license": "MIT",

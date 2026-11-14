@@ -80,9 +80,13 @@ estimated cost; the dashboard adds a 30-day chart and a 14-day table.
 
 **Sharing across computers (same API key):** set
 `aiBalance.dailyCosts.sharedFilePath` to a JSON file in a synced folder
-(OneDrive, Dropbox, network share). Every machine merges its observations —
-the earliest day-start and the latest day-end win — so all machines agree on
-the daily spend even if only one of them ran at midnight.
+(OneDrive, Dropbox, Google Drive, or a network share such as
+`\\\\NAS\\share\\ai-balance\\daily-costs.json`). The path is local on each
+machine but must point to the same synced file (e.g. each computer's own
+OneDrive folder). Every machine merges its observations — the earliest
+day-start and the latest day-end win — so all machines agree on the daily
+spend even if only one of them ran at midnight. Cloud conflict copies
+(`daily-costs (1).json`, `daily-costs-<PC>.json`) are detected and merged too.
 
 Caveats:
 - The day starts at the first reading, which may be later than 00:00 if VS Code was not running.

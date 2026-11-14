@@ -32,7 +32,7 @@ ai-balance/
 - **API keys** are stored securely via VS Code SecretStorage (OS keychain), NOT in settings.json
 - **Settings prefix**: `aiBalance.*` (search `@aiBalance` in settings)
 - **Commands**: `aiBalance.refresh`, `aiBalance.configure`, `aiBalance.setDeepSeekKey`, `aiBalance.setOpenRouterKey`, `aiBalance.clearKeys`, `aiBalance.openDashboard`, `aiBalance.dashboardRefresh` (internal, used by the dashboard buttons), `aiBalance.setSharedCostsPath`
-- **Daily costs** stored in `context.globalState` (`aiBalance.dailyCosts.v2`); optional cross-computer sync via `aiBalance.dailyCosts.sharedFilePath` (earliest day-start wins)
+- **Daily costs** stored in `context.globalState` (`aiBalance.dailyCosts.v2`); optional cross-computer sync via `aiBalance.dailyCosts.sharedFilePath` (earliest day-start wins; conflict copies like `daily-costs (1).json` are merged too)
 
 ## Constraints
 - DO NOT store API keys in settings.json — use SecretStorage (`context.secrets.store/get/delete`)
