@@ -112,7 +112,8 @@ export class DashboardPanel {
 				await this.costTracker.track(
 					r.key,
 					useUsage ? (r.usage as number) : r.balance,
-					useUsage ? 'usage' : 'balance'
+					useUsage ? 'usage' : 'balance',
+					r.balance
 				);
 			}
 
@@ -153,6 +154,7 @@ export class DashboardPanel {
 		// --- Footer -------------------------------------------------------------
 		sections.push(`<footer class="footer">
 			<a class="btn" href="command:aiBalance.dashboardRefresh">⟳ Odśwież</a>
+			<a class="btn secondary" href="command:aiBalance.setDayStartBalance">✍️ Saldo początkowe dnia</a>
 			<a class="btn secondary" href="command:aiBalance.configure">⚙️ Ustawienia</a>
 		</footer>`);
 
@@ -216,7 +218,7 @@ export class DashboardPanel {
 				earliestStart = earliestStart === null ? today.startAt : Math.min(earliestStart, today.startAt);
 			}
 
-			todayBits.push(`${r.name} ~${await this.formatMoney(todayValue, targetCurrency, symbol)}`);
+			todayBits.push(`${r.name} ~${await this.formatMoney(todayValue, targetCurrency, symbol)}${today?.manual ? ' ✍️' : ''}`);
 			monthBits.push(`${r.name} ~${await this.formatMoney(month, targetCurrency, symbol)}`);
 		}
 

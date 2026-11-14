@@ -136,10 +136,54 @@ export async function activate(context: vscode.ExtensionContext) {
 		statusBarManager.refresh();
 	});
 
+	const setDayStartBalanceCmd = vscode.commands.registerCommand('aiBalance.setDayStartBalance', async () => {
+		const provider = await vscode.window.showQuickPick(
+			[
+				{ label: 'DeepSeek', description: 'saldo konta (USD)', key: 'deepseek' },
+				{ label: 'OpenRouter', description: 'kredyty (USD)', key: 'openrouter' }
+			],
+			{ title: 'Saldo początkowe dnia — wybierz providera', ignoreFocusOut: true }
+		);
+		if (!provider) {
+			return;
+		}
+
+		const today = costTracker.getToday(provider.key);
+		const input = await vscode.window.showInputBox({
+			title: `Saldo początkowe dnia — ${provider.label} (USD)`,
+			prompt: 'Saldo z początku dnia (USD). Puste pole = usuń ręczne ustawienie i licz automatycznie.',
+			value: today?.manualStartBalance !== undefined ? String(today.manualStartBalance) : '',
+			placeHolder: 'np. 92.07',
+			ignoreFocusOut: true,
+			validateInput: (value) => {
+				const text = value.trim().replace(',', '.');
+				if (text === '') {
+					return null;
+				}
+				const n = Number(text);
+				return Number.isFinite(n) && n >= 0 ? null : 'Podaj liczbę ≥ 0';
+			}
+		});
+		if (input === undefined) {
+			return;
+		}
+
+		const text = input.trim().replace(',', '.');
+		if (text === '') {
+			await costTracker.setManualStart(provider.key, null);
+			vscode.window.showInformationMessage('Ręczne saldo początkowe dnia usunięte');
+		} else {
+			await costTracker.setManualStart(provider.key, Number(text));
+			vscode.window.showInformationMessage('Saldo początkowe dnia zapisane');
+		}
+		statusBarManager.refresh();
+		DashboardPanel.refreshCurrent(true);
+	});
+
 	context.subscriptions.push(
 		refreshCmd, configureCmd,
 		setDeepSeekKeyCmd, setOpenRouterKeyCmd, clearKeysCmd,
-		openDashboardCmd, dashboardRefreshCmd, setSharedCostsPathCmd,
+		openDashboardCmd, dashboardRefreshCmd, setSharedCostsPathCmd, setDayStartBalanceCmd,
 		statusBarManager
 	);
 

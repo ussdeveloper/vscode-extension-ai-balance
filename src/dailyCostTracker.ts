@@ -37,6 +37,14 @@ export interface DailyCostRecord {
 	lastAt: number;
 	/** How the metric is interpreted (usage grows, balance shrinks). */
 	metricKind: MetricKind;
+	/** Balance (USD) at the earliest observation of the day. */
+	startBalance?: number;
+	/** Balance (USD) at the latest observation of the day. */
+	lastBalance?: number;
+	/** Manually entered day-start balance (USD) — overrides the automatic baseline. */
+	manualStartBalance?: number;
+	/** Epoch ms when the manual override was set. */
+	manualStartAt?: number;
 }
 
 export interface DailyCostDay {
@@ -72,11 +80,15 @@ function localDateKey(date: Date): string {
 
 /** Money spent during the day according to a single record. */
 export function spentUsd(record: DailyCostRecord): number {
-	const delta =
-		record.metricKind === 'usage'
-			? record.lastMetric - record.startMetric
-			: record.startMetric - record.lastMetric;
-	return Math.max(delta, 0);
+	if (record.manualStartBalance !== undefined && record.lastBalance !== undefined) {
+		return Math.max(record.manualStartBalance - record.lastBalance, 0);
+	}
+	if (record.metricKind === 'usage') {
+		return Math.max(record.lastMetric - record.startMetric, 0);
+	}
+	const start = record.startBalance ?? record.startMetric;
+	const last = record.lastBalance ?? record.lastMetric;
+	return Math.max(start - last, 0);
 }
 
 /**
@@ -89,13 +101,21 @@ function mergeRecords(a: DailyCostRecord, b: DailyCostRecord): DailyCostRecord {
 	}
 	const start = a.startAt <= b.startAt ? a : b;
 	const last = a.lastAt >= b.lastAt ? a : b;
+	const manual = [a, b]
+		.filter((r) => r.manualStartBalance !== undefined)
+		.sort((x, y) => (y.manualStartAt ?? 0) - (x.manualStartAt ?? 0))[0];
+
 	return {
 		date: start.date,
 		metricKind: start.metricKind,
 		startMetric: start.startMetric,
 		startAt: start.startAt,
 		lastMetric: last.lastMetric,
-		lastAt: last.lastAt
+		lastAt: last.lastAt,
+		startBalance: start.startBalance ?? (start.metricKind === 'balance' ? start.startMetric : undefined),
+		lastBalance: last.lastBalance ?? (last.metricKind === 'balance' ? last.lastMetric : undefined),
+		manualStartBalance: manual?.manualStartBalance,
+		manualStartAt: manual?.manualStartAt
 	};
 }
 
@@ -138,7 +158,7 @@ export class DailyCostTracker {
 	}
 
 	/** Records the current observation for a provider (call after every balance refresh). */
-	async track(providerKey: string, metric: number, kind: MetricKind): Promise<void> {
+	async track(providerKey: string, metric: number, kind: MetricKind, balanceUsd?: number): Promise<void> {
 		if (!Number.isFinite(metric)) {
 			return;
 		}
@@ -158,18 +178,69 @@ export class DailyCostTracker {
 				startAt: now,
 				lastMetric: metric,
 				lastAt: now,
-				metricKind: kind
+				metricKind: kind,
+				startBalance: balanceUsd,
+				lastBalance: balanceUsd,
+				// preserve a manual override when the metric kind changes
+				manualStartBalance: existing?.manualStartBalance,
+				manualStartAt: existing?.manualStartAt
 			};
 		} else {
 			if (now < existing.startAt) {
 				existing.startMetric = metric;
 				existing.startAt = now;
+				if (balanceUsd !== undefined) {
+					existing.startBalance = balanceUsd;
+				}
 			}
 			existing.lastMetric = metric;
 			existing.lastAt = now;
+			if (balanceUsd !== undefined) {
+				if (existing.startBalance === undefined) {
+					existing.startBalance = balanceUsd;
+				}
+				existing.lastBalance = balanceUsd;
+			}
 		}
 
 		this.prune(provider, new Date());
+		await this.context.globalState.update(STORAGE_KEY, store);
+		await this.syncSharedFile(store);
+	}
+
+	/** Sets (or clears with null) a manual day-start balance override for today. */
+	async setManualStart(providerKey: string, amountUsd: number | null): Promise<void> {
+		const store = this.load();
+		const today = localDateKey(new Date());
+		const provider = store.providers[providerKey] ?? { records: {} };
+		store.providers[providerKey] = provider;
+		let record = provider.records[today];
+
+		if (amountUsd === null) {
+			if (!record) {
+				return;
+			}
+			delete record.manualStartBalance;
+			delete record.manualStartAt;
+		} else {
+			if (!record) {
+				const now = Date.now();
+				record = {
+					date: today,
+					startMetric: amountUsd,
+					startAt: now,
+					lastMetric: amountUsd,
+					lastAt: now,
+					metricKind: 'balance',
+					startBalance: amountUsd,
+					lastBalance: amountUsd
+				};
+				provider.records[today] = record;
+			}
+			record.manualStartBalance = amountUsd;
+			record.manualStartAt = Date.now();
+		}
+
 		await this.context.globalState.update(STORAGE_KEY, store);
 		await this.syncSharedFile(store);
 	}
@@ -186,9 +257,21 @@ export class DailyCostTracker {
 	}
 
 	/** Today's estimated spend for a provider (null when no reading was recorded today). */
-	getToday(providerKey: string): { spentUsd: number; startAt: number } | null {
+	getToday(providerKey: string): {
+		spentUsd: number;
+		startAt: number;
+		manual: boolean;
+		manualStartBalance?: number;
+	} | null {
 		const record = this.load().providers[providerKey]?.records[localDateKey(new Date())];
-		return record ? { spentUsd: spentUsd(record), startAt: record.startAt } : null;
+		return record
+			? {
+					spentUsd: spentUsd(record),
+					startAt: record.startAt,
+					manual: record.manualStartBalance !== undefined,
+					manualStartBalance: record.manualStartBalance
+				}
+			: null;
 	}
 
 	/** Sum of estimated spend for the current calendar month. */

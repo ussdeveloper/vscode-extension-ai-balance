@@ -58,6 +58,7 @@ Open VS Code settings (`Ctrl+,`) and search for `@aiBalance`:
 | `AI Balance: Clear All API Keys` | Remove all stored API keys |
 | `AI Balance: Open Usage Dashboard` | Open the usage dashboard tab (or click the status bar item) |
 | `AI Balance: Set Shared Costs File (sync)` | Choose the shared JSON file used to sync daily cost baselines across computers |
+| `AI Balance: Set Today's Starting Balance` | Manually enter today's opening balance (USD) per provider; empty input clears the override |
 
 ## API Endpoints
 
@@ -92,6 +93,12 @@ Caveats:
 - The day starts at the first reading, which may be later than 00:00 if VS Code was not running.
 - Top-ups increase the balance and can make a day's spend look lower (clamped at 0).
 - Data is stored locally in `globalState`; the shared file is optional.
+
+**Manual override:** if no machine was running at the start of the day, run
+**AI Balance: Set Today's Starting Balance**, pick a provider and enter the
+balance you had at the beginning of the day (leave empty to clear the
+override). The override is stored in the daily record and synced via the
+shared file, and is marked with ✍️ in the tooltip and dashboard.
 
 ## Development
 

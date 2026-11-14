@@ -2,7 +2,7 @@
   "name": "ai-balance",
   "displayName": "AI Balance",
   "description": "Shows DeepSeek and OpenRouter API balance in the status bar",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "publisher": "sulaco",
   "icon": "icons/deepseek.png",
   "license": "MIT",
@@ -45,6 +45,10 @@
       {
         "command": "aiBalance.setSharedCostsPath",
         "title": "AI Balance: Set Shared Costs File (sync)"
+      },
+      {
+        "command": "aiBalance.setDayStartBalance",
+        "title": "AI Balance: Set Today's Starting Balance"
       }
     ],
     "configuration": {

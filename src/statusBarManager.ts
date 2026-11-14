@@ -127,7 +127,8 @@ export class StatusBarManager implements vscode.Disposable {
 			await this.costTracker.track(
 				r.key,
 				useUsage ? (r.usage as number) : r.balance,
-				useUsage ? 'usage' : 'balance'
+				useUsage ? 'usage' : 'balance',
+				r.balance
 			);
 		}
 
@@ -247,8 +248,9 @@ export class StatusBarManager implements vscode.Disposable {
 			const month = this.costTracker.getMonth(r.key);
 			const todayStr = await this.formatCost(today?.spentUsd ?? 0, targetCurrency, currencySymbol);
 			const monthStr = await this.formatCost(month, targetCurrency, currencySymbol);
+			const icon = today?.manual ? '✍️' : '📊';
 
-			lines.push(`📊 ${r.name} — dziś: ~${todayStr} · ${monthLabel}: ~${monthStr}`);
+			lines.push(`${icon} ${r.name} — dziś: ~${todayStr} · ${monthLabel}: ~${monthStr}`);
 		}
 
 		if (lines.length > 0) {

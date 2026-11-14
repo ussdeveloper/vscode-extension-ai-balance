@@ -127,7 +127,7 @@ class StatusBarManager {
                 continue;
             }
             const useUsage = typeof r.usage === 'number';
-            await this.costTracker.track(r.key, useUsage ? r.usage : r.balance, useUsage ? 'usage' : 'balance');
+            await this.costTracker.track(r.key, useUsage ? r.usage : r.balance, useUsage ? 'usage' : 'balance', r.balance);
         }
         const dailyUsageLines = await this.computeDailyUsage(results, targetCurrency, currencySymbol);
         // Today's total cost for the status bar (sum across providers, converted)
@@ -214,7 +214,8 @@ class StatusBarManager {
             const month = this.costTracker.getMonth(r.key);
             const todayStr = await this.formatCost(today?.spentUsd ?? 0, targetCurrency, currencySymbol);
             const monthStr = await this.formatCost(month, targetCurrency, currencySymbol);
-            lines.push(`📊 ${r.name} — dziś: ~${todayStr} · ${monthLabel}: ~${monthStr}`);
+            const icon = today?.manual ? '✍️' : '📊';
+            lines.push(`${icon} ${r.name} — dziś: ~${todayStr} · ${monthLabel}: ~${monthStr}`);
         }
         if (lines.length > 0) {
             lines.unshift('Koszty dzienne (od pierwszego odczytu salda dnia):');

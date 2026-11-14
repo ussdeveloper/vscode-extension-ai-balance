@@ -31,7 +31,7 @@ ai-balance/
 - **Build**: `npx tsc -p tsconfig.json` then `npx vsce package --allow-missing-repository --no-dependencies` (npm's `list` is broken on this machine)
 - **API keys** are stored securely via VS Code SecretStorage (OS keychain), NOT in settings.json
 - **Settings prefix**: `aiBalance.*` (search `@aiBalance` in settings)
-- **Commands**: `aiBalance.refresh`, `aiBalance.configure`, `aiBalance.setDeepSeekKey`, `aiBalance.setOpenRouterKey`, `aiBalance.clearKeys`, `aiBalance.openDashboard`, `aiBalance.dashboardRefresh` (internal, used by the dashboard buttons), `aiBalance.setSharedCostsPath`
+- **Commands**: `aiBalance.refresh`, `aiBalance.configure`, `aiBalance.setDeepSeekKey`, `aiBalance.setOpenRouterKey`, `aiBalance.clearKeys`, `aiBalance.openDashboard`, `aiBalance.dashboardRefresh` (internal, used by the dashboard buttons), `aiBalance.setSharedCostsPath`, `aiBalance.setDayStartBalance` (manual opening-balance override)
 - **Daily costs** stored in `context.globalState` (`aiBalance.dailyCosts.v2`); optional cross-computer sync via `aiBalance.dailyCosts.sharedFilePath` (earliest day-start wins; conflict copies like `daily-costs (1).json` are merged too)
 
 ## Constraints

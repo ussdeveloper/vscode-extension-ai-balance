@@ -105,7 +105,7 @@ class DashboardPanel {
                     continue;
                 }
                 const useUsage = typeof r.usage === 'number';
-                await this.costTracker.track(r.key, useUsage ? r.usage : r.balance, useUsage ? 'usage' : 'balance');
+                await this.costTracker.track(r.key, useUsage ? r.usage : r.balance, useUsage ? 'usage' : 'balance', r.balance);
             }
             const body = await this.buildBody(results, targetCurrency, symbol);
             this.panel.webview.html = this.shell(body);
@@ -138,6 +138,7 @@ class DashboardPanel {
         // --- Footer -------------------------------------------------------------
         sections.push(`<footer class="footer">
 			<a class="btn" href="command:aiBalance.dashboardRefresh">⟳ Odśwież</a>
+			<a class="btn secondary" href="command:aiBalance.setDayStartBalance">✍️ Saldo początkowe dnia</a>
 			<a class="btn secondary" href="command:aiBalance.configure">⚙️ Ustawienia</a>
 		</footer>`);
         return sections.join('\n');
@@ -186,7 +187,7 @@ class DashboardPanel {
             if (today) {
                 earliestStart = earliestStart === null ? today.startAt : Math.min(earliestStart, today.startAt);
             }
-            todayBits.push(`${r.name} ~${await this.formatMoney(todayValue, targetCurrency, symbol)}`);
+            todayBits.push(`${r.name} ~${await this.formatMoney(todayValue, targetCurrency, symbol)}${today?.manual ? ' ✍️' : ''}`);
             monthBits.push(`${r.name} ~${await this.formatMoney(month, targetCurrency, symbol)}`);
         }
         const sinceNote = earliestStart
