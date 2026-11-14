@@ -130,7 +130,20 @@ class StatusBarManager {
             await this.costTracker.track(r.key, useUsage ? r.usage : r.balance, useUsage ? 'usage' : 'balance');
         }
         const dailyUsageLines = await this.computeDailyUsage(results, targetCurrency, currencySymbol);
-        this.snapshot = { providerParts, tooltipLines, dailyUsageLines };
+        // Today's total cost for the status bar (sum across providers, converted)
+        let dailyCostUsd = 0;
+        for (const r of results) {
+            if (r.balance === null) {
+                continue;
+            }
+            dailyCostUsd += this.costTracker.getToday(r.key)?.spentUsd ?? 0;
+        }
+        let dailyCostPart = null;
+        if (config.get('display.showDailyCost', true)) {
+            const converted = await this.currencyConverter.convert(dailyCostUsd, targetCurrency);
+            dailyCostPart = `$(calendar) ${StatusBarManager.formatShortAmount(converted.amount)}`;
+        }
+        this.snapshot = { providerParts, tooltipLines, dailyUsageLines, dailyCostPart };
         this.render();
     }
     shortName(name) {
@@ -155,8 +168,12 @@ class StatusBarManager {
         const transition = (0, peakUtils_js_1.getNextPeakTransition)();
         const countdown = (0, peakUtils_js_1.formatCountdown)(transition.minutes);
         const targetTime = (0, peakUtils_js_1.formatTransitionTarget)(transition.at);
-        // Countdown right next to the peak dot, then provider balances
-        this.statusBarItem.text = [`${peakIndicator} ${countdown}`, ...this.snapshot.providerParts].join(' ');
+        // Countdown next to the peak dot, then provider balances and today's cost
+        const textParts = [`${peakIndicator} ${countdown}`, ...this.snapshot.providerParts];
+        if (this.snapshot.dailyCostPart) {
+            textParts.push(this.snapshot.dailyCostPart);
+        }
+        this.statusBarItem.text = textParts.join(' ');
         const peakInfo = isPeak
             ? '🔴 DeepSeek: PEAK HOURS (2× cena)'
             : isWeekend
@@ -201,6 +218,13 @@ class StatusBarManager {
         }
         if (lines.length > 0) {
             lines.unshift('Koszty dzienne (od pierwszego odczytu salda dnia):');
+            const sharedPath = vscode.workspace
+                .getConfiguration('aiBalance')
+                .get('dailyCosts.sharedFilePath', '')
+                .trim();
+            lines.push(sharedPath
+                ? `🔗 Sync między komputerami: ${sharedPath}`
+                : '🔗 Sync: tylko ten komputer — komenda "AI Balance: Set Shared Costs File" włącza współdzielenie pierwszego odczytu dnia');
         }
         return lines;
     }
@@ -208,6 +232,16 @@ class StatusBarManager {
     static monthLabel(date) {
         const label = date.toLocaleDateString('pl-PL', { month: 'long' });
         return label.charAt(0).toUpperCase() + label.slice(1);
+    }
+    /** Compact amount for the status bar: 1.23 / 0.123 / 0.0123. */
+    static formatShortAmount(value) {
+        if (value >= 1) {
+            return value.toFixed(2);
+        }
+        if (value >= 0.01) {
+            return value.toFixed(3);
+        }
+        return value.toFixed(4);
     }
     dispose() {
         if (this.tickTimer) {

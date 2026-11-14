@@ -17,6 +17,7 @@ interface StatusSnapshot {
 	providerParts: string[];
 	tooltipLines: string[];
 	dailyUsageLines: string[];
+	dailyCostPart: string | null;
 }
 
 export class StatusBarManager implements vscode.Disposable {
@@ -132,7 +133,21 @@ export class StatusBarManager implements vscode.Disposable {
 
 		const dailyUsageLines = await this.computeDailyUsage(results, targetCurrency, currencySymbol);
 
-		this.snapshot = { providerParts, tooltipLines, dailyUsageLines };
+		// Today's total cost for the status bar (sum across providers, converted)
+		let dailyCostUsd = 0;
+		for (const r of results) {
+			if (r.balance === null) {
+				continue;
+			}
+			dailyCostUsd += this.costTracker.getToday(r.key)?.spentUsd ?? 0;
+		}
+		let dailyCostPart: string | null = null;
+		if (config.get<boolean>('display.showDailyCost', true)) {
+			const converted = await this.currencyConverter.convert(dailyCostUsd, targetCurrency);
+			dailyCostPart = `$(calendar) ${StatusBarManager.formatShortAmount(converted.amount)}`;
+		}
+
+		this.snapshot = { providerParts, tooltipLines, dailyUsageLines, dailyCostPart };
 		this.render();
 	}
 
@@ -163,8 +178,12 @@ export class StatusBarManager implements vscode.Disposable {
 		const countdown = formatCountdown(transition.minutes);
 		const targetTime = formatTransitionTarget(transition.at);
 
-		// Countdown right next to the peak dot, then provider balances
-		this.statusBarItem.text = [`${peakIndicator} ${countdown}`, ...this.snapshot.providerParts].join(' ');
+		// Countdown next to the peak dot, then provider balances and today's cost
+		const textParts = [`${peakIndicator} ${countdown}`, ...this.snapshot.providerParts];
+		if (this.snapshot.dailyCostPart) {
+			textParts.push(this.snapshot.dailyCostPart);
+		}
+		this.statusBarItem.text = textParts.join(' ');
 
 		const peakInfo = isPeak
 			? '🔴 DeepSeek: PEAK HOURS (2× cena)'
@@ -234,6 +253,15 @@ export class StatusBarManager implements vscode.Disposable {
 
 		if (lines.length > 0) {
 			lines.unshift('Koszty dzienne (od pierwszego odczytu salda dnia):');
+			const sharedPath = vscode.workspace
+				.getConfiguration('aiBalance')
+				.get<string>('dailyCosts.sharedFilePath', '')
+				.trim();
+			lines.push(
+				sharedPath
+					? `🔗 Sync między komputerami: ${sharedPath}`
+					: '🔗 Sync: tylko ten komputer — komenda "AI Balance: Set Shared Costs File" włącza współdzielenie pierwszego odczytu dnia'
+			);
 		}
 
 		return lines;
@@ -243,6 +271,17 @@ export class StatusBarManager implements vscode.Disposable {
 	private static monthLabel(date: Date): string {
 		const label = date.toLocaleDateString('pl-PL', { month: 'long' });
 		return label.charAt(0).toUpperCase() + label.slice(1);
+	}
+
+	/** Compact amount for the status bar: 1.23 / 0.123 / 0.0123. */
+	private static formatShortAmount(value: number): string {
+		if (value >= 1) {
+			return value.toFixed(2);
+		}
+		if (value >= 0.01) {
+			return value.toFixed(3);
+		}
+		return value.toFixed(4);
 	}
 
 	dispose() {

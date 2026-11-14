@@ -9,7 +9,7 @@ Shows DeepSeek and OpenRouter API balance in the VS Code status bar.
 
 - **Status bar display** — shows balances for DeepSeek and OpenRouter providers
 - **Peak-hours countdown** — 🔴/🟢 indicator with a live h:mm countdown to the next peak/off-peak switch (weekends are always off-peak)
-- **Daily cost tracking** — estimates daily spend from the earliest and latest balance reading of each day (today + current month in the tooltip)
+- **Daily cost tracking** — estimates daily spend from the earliest and latest balance reading of each day; today's cost is shown in the status bar and in the tooltip (today + current month)
 - **Multi-computer sync (optional)** — point `aiBalance.dailyCosts.sharedFilePath` at a file in OneDrive/Dropbox to share the day-start balance across machines using the same API key
 - **Model pricing in tooltip** — current DeepSeek price list per 1M tokens (peak & off-peak)
 - **Usage dashboard tab** — click the status bar item to open a dashboard: balance cards, 30-day cost chart, 14-day table, live peak-hours state
@@ -43,6 +43,8 @@ Open VS Code settings (`Ctrl+,`) and search for `@aiBalance`:
 | `aiBalance.providers.openrouter.apiUrl` | string | `https://openrouter.ai/api` | OpenRouter API URL |
 | `aiBalance.display.currency` | enum | `USD` | Target currency (USD/EUR/PLN/...) |
 | `aiBalance.display.showInStatusBar` | boolean | `true` | Show in status bar |
+| `aiBalance.display.showDailyCost` | boolean | `true` | Show today's estimated cost in the status bar |
+| `aiBalance.dailyCosts.sharedFilePath` | string | `""` | Shared JSON file to sync daily cost baselines across computers |
 | `aiBalance.refreshInterval` | number | `300` | Auto-refresh in seconds (0=off) |
 
 ## Commands
@@ -55,6 +57,7 @@ Open VS Code settings (`Ctrl+,`) and search for `@aiBalance`:
 | `AI Balance: Set OpenRouter API Key` | Securely store OpenRouter API key |
 | `AI Balance: Clear All API Keys` | Remove all stored API keys |
 | `AI Balance: Open Usage Dashboard` | Open the usage dashboard tab (or click the status bar item) |
+| `AI Balance: Set Shared Costs File (sync)` | Choose the shared JSON file used to sync daily cost baselines across computers |
 
 ## API Endpoints
 

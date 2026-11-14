@@ -133,7 +133,25 @@ async function activate(context) {
     const dashboardRefreshCmd = vscode.commands.registerCommand('aiBalance.dashboardRefresh', () => {
         dashboardPanel_js_1.DashboardPanel.refreshCurrent(true);
     });
-    context.subscriptions.push(refreshCmd, configureCmd, setDeepSeekKeyCmd, setOpenRouterKeyCmd, clearKeysCmd, openDashboardCmd, dashboardRefreshCmd, statusBarManager);
+    const setSharedCostsPathCmd = vscode.commands.registerCommand('aiBalance.setSharedCostsPath', async () => {
+        const current = vscode.workspace.getConfiguration('aiBalance').get('dailyCosts.sharedFilePath', '');
+        const input = await vscode.window.showInputBox({
+            title: 'Shared daily-costs file (sync across computers)',
+            value: current,
+            placeHolder: 'C:\\Users\\you\\OneDrive\\ai-balance\\daily-costs.json',
+            ignoreFocusOut: true,
+            prompt: 'Plik JSON w synchronizowanym folderze (OneDrive/Dropbox/udział sieciowy). Puste = tylko ten komputer.'
+        });
+        if (input === undefined) {
+            return;
+        }
+        await vscode.workspace
+            .getConfiguration('aiBalance')
+            .update('dailyCosts.sharedFilePath', input.trim(), vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(input.trim() ? 'Wspólny plik kosztów ustawiony' : 'Synchronizacja kosztów wyłączona');
+        statusBarManager.refresh();
+    });
+    context.subscriptions.push(refreshCmd, configureCmd, setDeepSeekKeyCmd, setOpenRouterKeyCmd, clearKeysCmd, openDashboardCmd, dashboardRefreshCmd, setSharedCostsPathCmd, statusBarManager);
     // Listen for config changes → re-refresh
     const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration('aiBalance')) {

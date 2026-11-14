@@ -31,7 +31,7 @@ ai-balance/
 - **Build**: `npx tsc -p tsconfig.json` then `npx vsce package --allow-missing-repository --no-dependencies` (npm's `list` is broken on this machine)
 - **API keys** are stored securely via VS Code SecretStorage (OS keychain), NOT in settings.json
 - **Settings prefix**: `aiBalance.*` (search `@aiBalance` in settings)
-- **Commands**: `aiBalance.refresh`, `aiBalance.configure`, `aiBalance.setDeepSeekKey`, `aiBalance.setOpenRouterKey`, `aiBalance.clearKeys`, `aiBalance.openDashboard`, `aiBalance.dashboardRefresh` (internal, used by the dashboard buttons)
+- **Commands**: `aiBalance.refresh`, `aiBalance.configure`, `aiBalance.setDeepSeekKey`, `aiBalance.setOpenRouterKey`, `aiBalance.clearKeys`, `aiBalance.openDashboard`, `aiBalance.dashboardRefresh` (internal, used by the dashboard buttons), `aiBalance.setSharedCostsPath`
 - **Daily costs** stored in `context.globalState` (`aiBalance.dailyCosts.v2`); optional cross-computer sync via `aiBalance.dailyCosts.sharedFilePath` (earliest day-start wins)
 
 ## Constraints
@@ -57,6 +57,7 @@ ai-balance/
 ## Status Bar Display
 - Left-aligned, monochrome Codicon icons: `$(hubot)` for DeepSeek, `$(radio-tower)` for OpenRouter
 - Peak dot `🔴`/`🟢` followed by a live h:mm countdown to the next peak/off-peak switch (weekends off-peak; re-rendered every 30 s from system time, no API calls)
+- Today's estimated cost follows the balances as `$(calendar) <amount>` (setting `aiBalance.display.showDailyCost`, default on)
 - Click opens the usage dashboard tab (settings / token / platform buttons are inside); legacy `aiBalance.configure` still opens settings
 - Tooltip: balances, today's + this month's estimated cost (balance snapshots), model pricing (peak/off-peak), peak-hour details
 
