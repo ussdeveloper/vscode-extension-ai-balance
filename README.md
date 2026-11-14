@@ -13,6 +13,7 @@ Shows DeepSeek and OpenRouter API balance in the VS Code status bar.
 - **webitcache sync (default)** — all computers using the same token share the **lowest balance of the day**, so daily costs match even if a machine was offline at midnight
 - **Multi-computer sync (optional)** — point `aiBalance.dailyCosts.sharedFilePath` at a file in OneDrive/Dropbox to share the day-start balance across machines using the same API key
 - **Model pricing in tooltip** — current DeepSeek price list per 1M tokens (peak & off-peak)
+- **Rich tooltip** — Markdown/HTML tables with balances, daily & monthly costs, token prices converted to the selected currency, peak hours and quick action links
 - **Usage dashboard tab** — click the status bar item to open a dashboard: balance cards, 30-day cost chart, 14-day table, live peak-hours state
 - **Monochrome Codicon icons** — `$(hubot)` for DeepSeek, `$(radio-tower)` for OpenRouter
 - **Secure API key storage** — keys stored in OS keychain via VS Code SecretStorage API

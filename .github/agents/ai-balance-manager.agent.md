@@ -59,6 +59,8 @@ ai-balance/
 - Peak dot `🔴`/`🟢` followed by a live h:mm countdown to the next peak/off-peak switch (weekends off-peak; re-rendered every 30 s from system time, no API calls)
 - Today's estimated cost follows the balances as `$(calendar) <amount>` (setting `aiBalance.display.showDailyCost`, default on)
 - Click opens the usage dashboard tab (settings / token / platform buttons are inside); legacy `aiBalance.configure` still opens settings
+- Tooltip is a trusted `MarkdownString` (tables, theme icons, command links) and is updated only on refresh — never on the 30 s countdown tick — so it does not disappear while hovering
+- Dashboard webview must be created with `enableCommandUris: true`, otherwise footer buttons (`command:` links) do nothing
 - Tooltip: balances, today's + this month's estimated cost (balance snapshots), model pricing (peak/off-peak), peak-hour details
 
 ## Provider Knowledge

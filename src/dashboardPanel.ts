@@ -55,7 +55,7 @@ export class DashboardPanel {
 			DashboardPanel.viewType,
 			'AI Balance — Dashboard',
 			column,
-			{ retainContextWhenHidden: true }
+			{ retainContextWhenHidden: true, enableCommandUris: true }
 		);
 
 		DashboardPanel.currentPanel = new DashboardPanel(panel, context, provider, costTracker, currencyConverter);
@@ -156,9 +156,9 @@ export class DashboardPanel {
 
 		// --- Footer -------------------------------------------------------------
 		sections.push(`<footer class="footer">
-			<a class="btn" href="command:aiBalance.dashboardRefresh">⟳ Odśwież</a>
-			<a class="btn secondary" href="command:aiBalance.setDayStartBalance">✍️ Saldo początkowe dnia</a>
-			<a class="btn secondary" href="command:aiBalance.configure">⚙️ Ustawienia</a>
+			<a class="btn" href="command:aiBalance.dashboardRefresh">${DashboardPanel.icon('refresh')}Odśwież</a>
+			<a class="btn secondary" href="command:aiBalance.setDayStartBalance">${DashboardPanel.icon('pencil')}Saldo początkowe dnia</a>
+			<a class="btn secondary" href="command:aiBalance.configure">${DashboardPanel.icon('settings')}Ustawienia</a>
 		</footer>`);
 
 		return sections.join('\n');
@@ -350,6 +350,19 @@ export class DashboardPanel {
 		return label.charAt(0).toUpperCase() + label.slice(1);
 	}
 
+	/** Inline Lucide icons (MIT) for the footer buttons. */
+	private static icon(name: 'refresh' | 'pencil' | 'settings'): string {
+		const paths: Record<string, string> = {
+			refresh:
+				'<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>',
+			pencil:
+				'<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+			settings:
+				'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'
+		};
+		return `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
+	}
+
 	private shell(body: string): string {
 		return `<!DOCTYPE html>
 <html lang="pl">
@@ -423,6 +436,7 @@ export class DashboardPanel {
 		display: inline-block; padding: 6px 14px; border-radius: 6px; font-size: 13px;
 		text-decoration: none; background: var(--vscode-button-background); color: var(--vscode-button-foreground);
 	}
+	.btn svg { vertical-align: -2px; margin-right: 6px; }
 	.btn:hover { background: var(--vscode-button-hoverBackground); }
 	.btn.secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
 	.btn.secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
