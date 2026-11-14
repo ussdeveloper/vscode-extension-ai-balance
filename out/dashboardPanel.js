@@ -190,7 +190,10 @@ class DashboardPanel {
             if (today) {
                 earliestStart = earliestStart === null ? today.startAt : Math.min(earliestStart, today.startAt);
             }
-            todayBits.push(`${r.name} ~${await this.formatMoney(todayValue, targetCurrency, symbol)}${today?.manual ? ' ✍️' : ''}`);
+            todayBits.push(`${r.name} ~${await this.formatMoney(todayValue, targetCurrency, symbol)}` +
+                (today?.manual && today.manualStartBalance !== undefined
+                    ? ` ✍️ start ${(0, formatUtils_js_1.formatUsdAmount)(today.manualStartBalance)}`
+                    : ''));
             monthBits.push(`${r.name} ~${await this.formatMoney(month, targetCurrency, symbol)}`);
         }
         const startLocal = earliestStart

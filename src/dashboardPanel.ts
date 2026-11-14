@@ -222,7 +222,12 @@ export class DashboardPanel {
 				earliestStart = earliestStart === null ? today.startAt : Math.min(earliestStart, today.startAt);
 			}
 
-			todayBits.push(`${r.name} ~${await this.formatMoney(todayValue, targetCurrency, symbol)}${today?.manual ? ' ✍️' : ''}`);
+			todayBits.push(
+				`${r.name} ~${await this.formatMoney(todayValue, targetCurrency, symbol)}` +
+					(today?.manual && today.manualStartBalance !== undefined
+						? ` ✍️ start ${formatUsdAmount(today.manualStartBalance)}`
+						: '')
+			);
 			monthBits.push(`${r.name} ~${await this.formatMoney(month, targetCurrency, symbol)}`);
 		}
 

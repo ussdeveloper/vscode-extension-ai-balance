@@ -102,11 +102,16 @@ function snapshotSignature(snapshot: RemoteSnapshot): string {
 
 /** Money spent during the day according to a single record. */
 export function spentUsd(record: DailyCostRecord): number {
+	// A manual opening balance always wins — for balance- AND usage-based records
+	if (record.manualStartBalance !== undefined) {
+		const end = record.dayMinBalance ?? record.lastBalance ?? record.lastMetric;
+		return Math.max(record.manualStartBalance - end, 0);
+	}
 	if (record.metricKind === 'usage') {
 		return Math.max(record.lastMetric - record.startMetric, 0);
 	}
 	// Lowest balance of the day (shared across computers) is the day's end value
-	const start = record.manualStartBalance ?? record.startBalance ?? record.startMetric;
+	const start = record.startBalance ?? record.startMetric;
 	const end = record.dayMinBalance ?? record.lastBalance ?? record.lastMetric;
 	return Math.max(start - end, 0);
 }

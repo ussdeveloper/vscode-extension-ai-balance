@@ -9,6 +9,17 @@ import { DashboardPanel } from './dashboardPanel.js';
 let balanceProvider: BalanceProvider;
 let statusBarManager: StatusBarManager;
 let refreshTimer: ReturnType<typeof setInterval> | undefined;
+let dayStartDialogOpen = false;
+
+/** Parses "92,07", "$92.07", "92.07 USD" → 92.07; null when empty/unusable. */
+function parseAmount(raw: string): number | null {
+	const cleaned = raw.replace(/\s/g, '').replace(',', '.').replace(/[^0-9.]/g, '');
+	if (cleaned === '' || cleaned === '.') {
+		return null;
+	}
+	const value = Number(cleaned);
+	return Number.isFinite(value) ? value : null;
+}
 
 export async function activate(context: vscode.ExtensionContext) {
 	console.log('AI Balance extension activating...');
@@ -188,47 +199,70 @@ export async function activate(context: vscode.ExtensionContext) {
 	});
 
 	const setDayStartBalanceCmd = vscode.commands.registerCommand('aiBalance.setDayStartBalance', async () => {
-		const provider = await vscode.window.showQuickPick(
-			[
-				{ label: 'DeepSeek', description: 'saldo konta (USD)', key: 'deepseek' },
-				{ label: 'OpenRouter', description: 'kredyty (USD)', key: 'openrouter' }
-			],
-			{ title: 'Saldo początkowe dnia — wybierz providera', ignoreFocusOut: true }
-		);
-		if (!provider) {
-			return;
+		if (dayStartDialogOpen) {
+			return; // the tooltip/webview link can fire the command twice
 		}
+		dayStartDialogOpen = true;
+		try {
+			// Let the hover tooltip / webview release focus, otherwise the quick
+			// input opens without keyboard focus and Enter does nothing.
+			await new Promise((resolve) => setTimeout(resolve, 100));
 
-		const today = costTracker.getToday(provider.key);
-		const input = await vscode.window.showInputBox({
-			title: `Saldo początkowe dnia — ${provider.label} (USD)`,
-			prompt: 'Saldo z początku dnia (USD). Puste pole = usuń ręczne ustawienie i licz automatycznie.',
-			value: today?.manualStartBalance !== undefined ? String(today.manualStartBalance) : '',
-			placeHolder: 'np. 92.07',
-			ignoreFocusOut: true,
-			validateInput: (value) => {
-				const text = value.trim().replace(',', '.');
-				if (text === '') {
-					return null;
+			const provider = await vscode.window.showQuickPick(
+				[
+					{ label: 'DeepSeek', description: 'saldo konta (USD)', key: 'deepseek' },
+					{ label: 'OpenRouter', description: 'kredyty (USD)', key: 'openrouter' }
+				],
+				{
+					title: 'Saldo początkowe dnia — wybierz providera',
+					placeHolder: 'Enter zatwierdza wybór',
+					ignoreFocusOut: true
 				}
-				const n = Number(text);
-				return Number.isFinite(n) && n >= 0 ? null : 'Podaj liczbę ≥ 0';
+			);
+			if (!provider) {
+				return;
 			}
-		});
-		if (input === undefined) {
-			return;
-		}
 
-		const text = input.trim().replace(',', '.');
-		if (text === '') {
-			await costTracker.setManualStart(provider.key, null);
-			vscode.window.showInformationMessage('Ręczne saldo początkowe dnia usunięte');
-		} else {
-			await costTracker.setManualStart(provider.key, Number(text));
-			vscode.window.showInformationMessage('Saldo początkowe dnia zapisane');
+			const today = costTracker.getToday(provider.key);
+			const input = await vscode.window.showInputBox({
+				title: `Saldo początkowe dnia — ${provider.label} (USD)`,
+				prompt: 'Saldo z początku dnia (USD). Enter zatwierdza. Puste pole = usuń ręczne ustawienie i licz automatycznie.',
+				value: today?.manualStartBalance !== undefined ? String(today.manualStartBalance) : '',
+				placeHolder: 'np. 92.07',
+				ignoreFocusOut: true,
+				validateInput: (value) => {
+					if (value.trim() === '') {
+						return null;
+					}
+					const amount = parseAmount(value);
+					return amount !== null && amount >= 0 ? null : 'Podaj liczbę ≥ 0 (np. 92.07) albo zostaw puste';
+				}
+			});
+			console.info(`AI Balance: setDayStartBalance ${provider.key} → input=${JSON.stringify(input)}`);
+			if (input === undefined) {
+				return;
+			}
+
+			const amount = parseAmount(input);
+			if (amount === null) {
+				await costTracker.setManualStart(provider.key, null);
+				vscode.window.showInformationMessage(
+					`${provider.label}: ręczne saldo początkowe usunięte — liczę automatycznie`
+				);
+			} else {
+				await costTracker.setManualStart(provider.key, amount);
+				vscode.window.showInformationMessage(
+					`${provider.label}: saldo początkowe ${amount.toFixed(2)} USD zapisane — koszt dnia przeliczony`
+				);
+			}
+			statusBarManager.refresh();
+			DashboardPanel.refreshCurrent(true);
+		} catch (err) {
+			console.error('AI Balance: setDayStartBalance failed', err);
+			vscode.window.showErrorMessage(`Nie udało się zapisać salda początkowego: ${err}`);
+		} finally {
+			dayStartDialogOpen = false;
 		}
-		statusBarManager.refresh();
-		DashboardPanel.refreshCurrent(true);
 	});
 
 	context.subscriptions.push(
