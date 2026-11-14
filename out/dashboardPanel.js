@@ -356,7 +356,7 @@ class DashboardPanel {
 		font-size: 12px; display: flex; justify-content: space-between; gap: 10px;
 		color: var(--vscode-descriptionForeground); margin-bottom: 6px;
 	}
-	svg { width: 100%; height: auto; display: block; }
+	.chartCard svg { width: 100%; height: auto; display: block; }
 	table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 	th, td { text-align: left; padding: 7px 10px; font-size: 13px; border-bottom: 1px solid var(--vscode-widget-border, rgba(128,128,128,.18)); }
 	th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--vscode-descriptionForeground); font-weight: 600; }
@@ -377,12 +377,13 @@ class DashboardPanel {
 	.peak .countdown { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 2px 0; }
 	.peak-list { margin: 0; padding-left: 18px; font-size: 13px; color: var(--vscode-descriptionForeground); }
 	.peak-list li { margin: 3px 0; }
-	.footer { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; }
+	.footer { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 	.btn {
-		display: inline-block; padding: 6px 14px; border-radius: 6px; font-size: 13px;
+		display: inline-flex; align-items: center; gap: 7px;
+		padding: 7px 16px; border-radius: 6px; font-size: 13px; line-height: 1;
 		text-decoration: none; background: var(--vscode-button-background); color: var(--vscode-button-foreground);
 	}
-	.btn svg { vertical-align: -2px; margin-right: 6px; }
+	.btn svg { width: .75em; height: .75em; flex: 0 0 auto; display: inline-block; }
 	.btn:hover { background: var(--vscode-button-hoverBackground); }
 	.btn.secondary { background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
 	.btn.secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
