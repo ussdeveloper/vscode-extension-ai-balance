@@ -141,6 +141,7 @@ class DashboardPanel {
         sections.push(`<footer class="footer">
 			<a class="btn" href="command:aiBalance.dashboardRefresh">${DashboardPanel.icon('refresh')}Odśwież</a>
 			<a class="btn secondary" href="command:aiBalance.setDayStartBalance">${DashboardPanel.icon('pencil')}Saldo początkowe dnia</a>
+			<a class="btn secondary" href="command:aiBalance.resetWebitcacheToken">${DashboardPanel.icon('rotate')}Przywróć domyślny token</a>
 			<a class="btn secondary" href="command:aiBalance.configure">${DashboardPanel.icon('settings')}Ustawienia</a>
 		</footer>`);
         return sections.join('\n');
@@ -233,8 +234,7 @@ class DashboardPanel {
 			<table><thead><tr><th>Data</th>${providerCols}<th class="num">Razem</th></tr></thead><tbody>${rows}</tbody></table></div>`;
         const cfg = vscode.workspace.getConfiguration('aiBalance');
         const sharedPath = cfg.get('dailyCosts.sharedFilePath', '').trim();
-        const remoteEnabled = !!cfg.get('dailyCosts.remoteUrl', '').trim() &&
-            !!cfg.get('dailyCosts.remoteToken', '').trim();
+        const remoteEnabled = !!cfg.get('dailyCosts.remoteUrl', '').trim();
         const targets = [];
         if (remoteEnabled) {
             targets.push('webitcache');
@@ -243,8 +243,8 @@ class DashboardPanel {
             targets.push(sharedPath);
         }
         const syncNote = targets.length > 0
-            ? `<div class="notice">🔗 Synchronizacja: <code>${escapeHtml(targets.join(' + '))}</code> — dzień liczony w <b>UTC</b>: pierwszy odczyt po 00:00 UTC ustala saldo startowe, kolejne komputery tylko je odczytują, a najniższe saldo dnia zamyka kalkulację.</div>`
-            : `<div class="notice">💡 Dzień liczony w <b>UTC</b>. Skonfiguruj <code>aiBalance.dailyCosts.remoteToken</code> (webitcache) lub wspólny plik OneDrive/Dropbox, aby wszystkie komputery widziały to samo saldo startowe i ten sam dzienny koszt.</div>`;
+            ? `<div class="notice">🔗 Synchronizacja: <code>${escapeHtml(targets.join(' + '))}</code> — dzień liczony w <b>UTC</b>: pierwszy odczyt po 00:00 UTC ustala saldo startowe, kolejne komputery tylko je odczytują, a najniższe saldo dnia zamyka kalkulację. Token jest ukryty (OS keychain); domyślny przywrócisz przyciskiem „Przywróć domyślny token”.</div>`
+            : `<div class="notice">💡 Dzień liczony w <b>UTC</b>. Ustaw <code>aiBalance.dailyCosts.remoteUrl</code> (webitcache) lub wspólny plik OneDrive/Dropbox, aby wszystkie komputery widziały to samo saldo startowe i ten sam dzienny koszt. Token ustawiasz komendą „Set webitcache Token” — nigdy nie jest pokazywany.</div>`;
         return cards + chart + table + syncNote;
     }
     peakCard() {
@@ -310,6 +310,7 @@ class DashboardPanel {
     static icon(name) {
         const paths = {
             refresh: '<path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>',
+            rotate: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
             pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
             settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>'
         };

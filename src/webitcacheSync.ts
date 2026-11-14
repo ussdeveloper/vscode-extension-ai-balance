@@ -39,18 +39,42 @@ interface CacheEntry {
 	timestamp?: string;
 }
 
-function settings(): { url: string; token: string } | null {
+/** Built-in webitcache endpoint and token — never exposed in the Settings UI. */
+export const WEBITCACHE_DEFAULT_URL = 'https://webitcache.analogbrain.com';
+export const WEBITCACHE_DEFAULT_TOKEN = 'w-_TFrOQBwU_7mVJOOC7cvKWxAl_4raI6YEBW2Tsx7U';
+
+/** SecretStorage key for the optional user-provided (masked) token override. */
+export const WEBITCACHE_TOKEN_SECRET = 'aiBalance.webitcacheToken';
+
+interface CacheConfig {
+	url: string;
+	token: string;
+}
+
+/**
+ * Resolves endpoint + token. Precedence:
+ *   1. SecretStorage override (entered through a masked prompt — never displayed),
+ *   2. legacy plain-text `aiBalance.dailyCosts.remoteToken` from settings.json
+ *      (no longer contributed to the Settings UI, kept for compatibility),
+ *   3. the built-in token.
+ * Leaving `aiBalance.dailyCosts.remoteUrl` empty disables remote sync.
+ */
+function resolveConfig(tokenOverride: string): CacheConfig | null {
 	const config = vscode.workspace.getConfiguration('aiBalance');
-	const url = config.get<string>('dailyCosts.remoteUrl', '').trim().replace(/\/+$/, '');
-	const token = config.get<string>('dailyCosts.remoteToken', '').trim();
-	if (!url || !token) {
+	const url = config
+		.get<string>('dailyCosts.remoteUrl', WEBITCACHE_DEFAULT_URL)
+		.trim()
+		.replace(/\/+$/, '');
+	if (!url) {
 		return null;
 	}
+	const legacy = config.get<string>('dailyCosts.remoteToken', '').trim();
+	const token = tokenOverride.trim() || legacy || WEBITCACHE_DEFAULT_TOKEN;
 	return { url, token };
 }
 
-async function post(path: string, body: unknown): Promise<any | null> {
-	const cfg = settings();
+async function post(path: string, body: unknown, tokenOverride: string): Promise<any | null> {
+	const cfg = resolveConfig(tokenOverride);
 	if (!cfg) {
 		return null;
 	}
@@ -80,6 +104,9 @@ async function post(path: string, body: unknown): Promise<any | null> {
 }
 
 export class WebitcacheClient {
+	/** @param tokenOverride returns the SecretStorage token ('' = use built-in). */
+	constructor(private readonly tokenOverride: () => string = () => '') {}
+
 	/**
 	 * Reads the newest 10 entries and merges today's (UTC) state:
 	 * the EARLIEST day-start wins (a computer that starts later never replaces
@@ -89,7 +116,7 @@ export class WebitcacheClient {
 	async pull(today: string): Promise<{ ok: boolean; snapshot: RemoteSnapshot | null }> {
 		let entries: CacheEntry[] = [];
 
-		const history = await post('/history', {});
+		const history = await post('/history', {}, this.tokenOverride());
 		if (history === null) {
 			// Service unreachable or token rejected — the caller should not push either
 			return { ok: false, snapshot: null };
@@ -101,7 +128,7 @@ export class WebitcacheClient {
 		}
 
 		if (entries.length === 0) {
-			const latest = await post('/read', {});
+			const latest = await post('/read', {}, this.tokenOverride());
 			if (latest && typeof latest.data === 'string') {
 				entries = [latest];
 			}
@@ -159,7 +186,7 @@ export class WebitcacheClient {
 	async push(snapshot: RemoteSnapshot): Promise<void> {
 		const data = JSON.stringify(snapshot);
 		if (data.length <= 255) {
-			await post('/save', { data });
+			await post('/save', { data }, this.tokenOverride());
 		}
 	}
 }

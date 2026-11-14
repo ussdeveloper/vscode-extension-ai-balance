@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { BalanceProvider } from './balanceProvider.js';
 import { StatusBarManager } from './statusBarManager.js';
 import { DailyCostTracker } from './dailyCostTracker.js';
-import { WebitcacheClient } from './webitcacheSync.js';
+import { WebitcacheClient, WEBITCACHE_TOKEN_SECRET } from './webitcacheSync.js';
 import { CurrencyConverter } from './currencyConverter.js';
 import { DashboardPanel } from './dashboardPanel.js';
 
@@ -14,7 +14,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	console.log('AI Balance extension activating...');
 
 	balanceProvider = new BalanceProvider(context.secrets);
-	const costTracker = new DailyCostTracker(context, new WebitcacheClient());
+
+	// webitcache token: SecretStorage override (masked input) or the built-in one.
+	// The token is never contributed to the Settings UI, so it cannot be read there.
+	let webitcacheToken = (await context.secrets.get(WEBITCACHE_TOKEN_SECRET)) ?? '';
+
+	const costTracker = new DailyCostTracker(context, new WebitcacheClient(() => webitcacheToken));
 	const currencyConverter = new CurrencyConverter();
 	statusBarManager = new StatusBarManager(balanceProvider, costTracker, currencyConverter);
 
@@ -111,6 +116,51 @@ export async function activate(context: vscode.ExtensionContext) {
 		DashboardPanel.createOrShow(context, balanceProvider, costTracker, currencyConverter);
 	});
 
+	const setWebitcacheTokenCmd = vscode.commands.registerCommand('aiBalance.setWebitcacheToken', async () => {
+		const input = await vscode.window.showInputBox({
+			title: 'webitcache token (masked)',
+			password: true,
+			placeHolder: 'token — wartość jest ukryta',
+			ignoreFocusOut: true,
+			prompt: 'Token zapisywany w OS keychain i nigdy nie pokazywany. Puste pole = przywróć domyślny (wbudowany).'
+		});
+		if (input === undefined) {
+			return;
+		}
+
+		const value = input.trim();
+		if (value) {
+			await context.secrets.store(WEBITCACHE_TOKEN_SECRET, value);
+		} else {
+			await context.secrets.delete(WEBITCACHE_TOKEN_SECRET);
+		}
+		webitcacheToken = value;
+		vscode.window.showInformationMessage(
+			value ? 'webitcache token zapisany (maskowany)' : 'Przywrócono domyślny webitcache token'
+		);
+		statusBarManager.refresh();
+		DashboardPanel.refreshCurrent(true);
+	});
+
+	const resetWebitcacheTokenCmd = vscode.commands.registerCommand('aiBalance.resetWebitcacheToken', async () => {
+		await context.secrets.delete(WEBITCACHE_TOKEN_SECRET);
+		webitcacheToken = '';
+
+		// Remove a legacy plain-text token left over in settings.json (old versions)
+		const cfg = vscode.workspace.getConfiguration('aiBalance');
+		const inspected = cfg.inspect<string>('dailyCosts.remoteToken');
+		if (inspected?.globalValue !== undefined) {
+			await cfg.update('dailyCosts.remoteToken', undefined, vscode.ConfigurationTarget.Global);
+		}
+		if (inspected?.workspaceValue !== undefined) {
+			await cfg.update('dailyCosts.remoteToken', undefined, vscode.ConfigurationTarget.Workspace);
+		}
+
+		vscode.window.showInformationMessage('Przywrócono domyślny webitcache token (nie jest pokazywany)');
+		statusBarManager.refresh();
+		DashboardPanel.refreshCurrent(true);
+	});
+
 	const dashboardRefreshCmd = vscode.commands.registerCommand('aiBalance.dashboardRefresh', () => {
 		DashboardPanel.refreshCurrent(true);
 	});
@@ -185,6 +235,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		refreshCmd, configureCmd,
 		setDeepSeekKeyCmd, setOpenRouterKeyCmd, clearKeysCmd,
 		openDashboardCmd, dashboardRefreshCmd, setSharedCostsPathCmd, setDayStartBalanceCmd,
+		setWebitcacheTokenCmd, resetWebitcacheTokenCmd,
 		statusBarManager
 	);
 

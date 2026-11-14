@@ -179,9 +179,7 @@ export class StatusBarManager implements vscode.Disposable {
 		}
 
 		const sharedPath = config.get<string>('dailyCosts.sharedFilePath', '').trim();
-		const remoteEnabled =
-			!!config.get<string>('dailyCosts.remoteUrl', '').trim() &&
-			!!config.get<string>('dailyCosts.remoteToken', '').trim();
+		const remoteEnabled = !!config.get<string>('dailyCosts.remoteUrl', '').trim();
 		const syncTargets: string[] = [];
 		if (remoteEnabled) {
 			syncTargets.push('webitcache');

@@ -159,8 +159,7 @@ class StatusBarManager {
             dailyCostPart = `$(calendar) ${StatusBarManager.formatShortAmount(converted.amount)}`;
         }
         const sharedPath = config.get('dailyCosts.sharedFilePath', '').trim();
-        const remoteEnabled = !!config.get('dailyCosts.remoteUrl', '').trim() &&
-            !!config.get('dailyCosts.remoteToken', '').trim();
+        const remoteEnabled = !!config.get('dailyCosts.remoteUrl', '').trim();
         const syncTargets = [];
         if (remoteEnabled) {
             syncTargets.push('webitcache');

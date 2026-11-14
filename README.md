@@ -47,8 +47,7 @@ Open VS Code settings (`Ctrl+,`) and search for `@aiBalance`:
 | `aiBalance.display.showInStatusBar` | boolean | `true` | Show in status bar |
 | `aiBalance.display.showDailyCost` | boolean | `true` | Show today's estimated cost in the status bar |
 | `aiBalance.dailyCosts.sharedFilePath` | string | `""` | Shared JSON file to sync daily cost baselines across computers |
-| `aiBalance.dailyCosts.remoteUrl` | string | `https://webitcache.analogbrain.com` | webitcache base URL (empty = disable remote sync) |
-| `aiBalance.dailyCosts.remoteToken` | string | `w-_TFr...sx7U` | webitcache Bearer token — same on every computer |
+| `aiBalance.dailyCosts.remoteUrl` | string | `https://webitcache.analogbrain.com` | webitcache base URL (empty = disable remote sync). The token is **not** a setting — see commands below |
 | `aiBalance.refreshInterval` | number | `300` | Auto-refresh in seconds (0=off) |
 
 ## Commands
@@ -63,6 +62,8 @@ Open VS Code settings (`Ctrl+,`) and search for `@aiBalance`:
 | `AI Balance: Open Usage Dashboard` | Open the usage dashboard tab (or click the status bar item) |
 | `AI Balance: Set Shared Costs File (sync)` | Choose the shared JSON file used to sync daily cost baselines across computers |
 | `AI Balance: Set Today's Starting Balance` | Manually enter today's opening balance (USD) per provider; empty input clears the override |
+| `AI Balance: Set webitcache Token (masked)` | Store a webitcache token in the OS keychain — the value is masked and never displayed; empty input restores the built-in token |
+| `AI Balance: Restore Default webitcache Token` | Drop the stored token and fall back to the built-in one (also removes a legacy plain-text `dailyCosts.remoteToken` from `settings.json`) |
 
 ## API Endpoints
 
@@ -93,11 +94,13 @@ stored day-start and only adds its own observations (latest/lowest). Example:
 machine A reads at 01:00 UTC → saves the day-start; machine B reads at 02:00 UTC
 → sees the existing entry, keeps it and computes its daily cost from that
 baseline. The cache is re-published only when the merged state actually changes
-(a lower balance later in the day). Configure with
-`aiBalance.dailyCosts.remoteUrl` / `remoteToken` (the same token on every
-machine); leave either empty to disable. ⚠️ The token is shared storage:
-anyone who has it can read/write that cache — keep the repository private or
-change the default token.
+(a lower balance later in the day). The endpoint comes from
+`aiBalance.dailyCosts.remoteUrl` (empty = disable); the **token is never a
+setting** — it lives in the OS keychain (masked input via
+`AI Balance: Set webitcache Token`, or the built-in default restored with
+`AI Balance: Restore Default webitcache Token`). ⚠️ The token is shared
+storage: anyone who has it can read/write that cache, so keep the default
+token out of public forks.
 
 **Sharing across computers (same API key):** set
 `aiBalance.dailyCosts.sharedFilePath` to a JSON file in a synced folder

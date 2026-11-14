@@ -2,7 +2,7 @@
   "name": "ai-balance",
   "displayName": "AI Balance",
   "description": "Shows DeepSeek and OpenRouter API balance in the status bar",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "publisher": "sulaco",
   "icon": "icons/deepseek.png",
   "license": "MIT",
@@ -49,6 +49,14 @@
       {
         "command": "aiBalance.setDayStartBalance",
         "title": "AI Balance: Set Today's Starting Balance"
+      },
+      {
+        "command": "aiBalance.setWebitcacheToken",
+        "title": "AI Balance: Set webitcache Token (masked)"
+      },
+      {
+        "command": "aiBalance.resetWebitcacheToken",
+        "title": "AI Balance: Restore Default webitcache Token"
       }
     ],
     "configuration": {
@@ -124,12 +132,7 @@
         "aiBalance.dailyCosts.remoteUrl": {
           "type": "string",
           "default": "https://webitcache.analogbrain.com",
-          "description": "webitcache base URL used to share the lowest balance of the day across computers. Leave empty to disable remote sync."
-        },
-        "aiBalance.dailyCosts.remoteToken": {
-          "type": "string",
-          "default": "w-_TFrOQBwU_7mVJOOC7cvKWxAl_4raI6YEBW2Tsx7U",
-          "description": "webitcache Bearer token — use the SAME token on every computer. Anyone with this token can read/write the shared cache; keep the repo private. Leave empty to disable remote sync."
+          "description": "webitcache base URL used to share the day-start balance across computers. Leave empty to disable remote sync. The token is stored separately (masked, OS keychain) — use the 'AI Balance: Set webitcache Token' / 'Restore Default webitcache Token' commands."
         }
       }
     }

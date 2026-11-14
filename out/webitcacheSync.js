@@ -33,19 +33,36 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WebitcacheClient = void 0;
+exports.WebitcacheClient = exports.WEBITCACHE_TOKEN_SECRET = exports.WEBITCACHE_DEFAULT_TOKEN = exports.WEBITCACHE_DEFAULT_URL = void 0;
 const vscode = __importStar(require("vscode"));
-function settings() {
+/** Built-in webitcache endpoint and token — never exposed in the Settings UI. */
+exports.WEBITCACHE_DEFAULT_URL = 'https://webitcache.analogbrain.com';
+exports.WEBITCACHE_DEFAULT_TOKEN = 'w-_TFrOQBwU_7mVJOOC7cvKWxAl_4raI6YEBW2Tsx7U';
+/** SecretStorage key for the optional user-provided (masked) token override. */
+exports.WEBITCACHE_TOKEN_SECRET = 'aiBalance.webitcacheToken';
+/**
+ * Resolves endpoint + token. Precedence:
+ *   1. SecretStorage override (entered through a masked prompt — never displayed),
+ *   2. legacy plain-text `aiBalance.dailyCosts.remoteToken` from settings.json
+ *      (no longer contributed to the Settings UI, kept for compatibility),
+ *   3. the built-in token.
+ * Leaving `aiBalance.dailyCosts.remoteUrl` empty disables remote sync.
+ */
+function resolveConfig(tokenOverride) {
     const config = vscode.workspace.getConfiguration('aiBalance');
-    const url = config.get('dailyCosts.remoteUrl', '').trim().replace(/\/+$/, '');
-    const token = config.get('dailyCosts.remoteToken', '').trim();
-    if (!url || !token) {
+    const url = config
+        .get('dailyCosts.remoteUrl', exports.WEBITCACHE_DEFAULT_URL)
+        .trim()
+        .replace(/\/+$/, '');
+    if (!url) {
         return null;
     }
+    const legacy = config.get('dailyCosts.remoteToken', '').trim();
+    const token = tokenOverride.trim() || legacy || exports.WEBITCACHE_DEFAULT_TOKEN;
     return { url, token };
 }
-async function post(path, body) {
-    const cfg = settings();
+async function post(path, body, tokenOverride) {
+    const cfg = resolveConfig(tokenOverride);
     if (!cfg) {
         return null;
     }
@@ -75,6 +92,11 @@ async function post(path, body) {
     }
 }
 class WebitcacheClient {
+    tokenOverride;
+    /** @param tokenOverride returns the SecretStorage token ('' = use built-in). */
+    constructor(tokenOverride = () => '') {
+        this.tokenOverride = tokenOverride;
+    }
     /**
      * Reads the newest 10 entries and merges today's (UTC) state:
      * the EARLIEST day-start wins (a computer that starts later never replaces
@@ -83,7 +105,7 @@ class WebitcacheClient {
      */
     async pull(today) {
         let entries = [];
-        const history = await post('/history', {});
+        const history = await post('/history', {}, this.tokenOverride());
         if (history === null) {
             // Service unreachable or token rejected — the caller should not push either
             return { ok: false, snapshot: null };
@@ -95,7 +117,7 @@ class WebitcacheClient {
             entries = history.entries;
         }
         if (entries.length === 0) {
-            const latest = await post('/read', {});
+            const latest = await post('/read', {}, this.tokenOverride());
             if (latest && typeof latest.data === 'string') {
                 entries = [latest];
             }
@@ -145,7 +167,7 @@ class WebitcacheClient {
     async push(snapshot) {
         const data = JSON.stringify(snapshot);
         if (data.length <= 255) {
-            await post('/save', { data });
+            await post('/save', { data }, this.tokenOverride());
         }
     }
 }
