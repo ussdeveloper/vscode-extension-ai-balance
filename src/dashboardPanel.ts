@@ -225,9 +225,15 @@ export class DashboardPanel {
 			monthBits.push(`${r.name} ~${await this.formatMoney(month, targetCurrency, symbol)}`);
 		}
 
+		const startLocal = earliestStart
+			? new Date(earliestStart).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })
+			: null;
+		const startUtc = earliestStart
+			? new Date(earliestStart).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
+			: null;
 		const sinceNote = earliestStart
-			? `pierwszy odczyt dnia: ${new Date(earliestStart).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}`
-			: 'oczekiwanie na pierwszy odczyt dnia';
+			? `saldo startowe dnia z ${startLocal} (UTC ${startUtc})`
+			: 'oczekiwanie na pierwszy odczyt dnia (UTC)';
 
 		const cards = `<div class="grid usage">
 			<div class="card"><div class="label">Dziś · koszt</div><div class="value">~${await this.formatMoney(totalToday, targetCurrency, symbol)}</div>
@@ -276,8 +282,8 @@ export class DashboardPanel {
 		}
 		const syncNote =
 			targets.length > 0
-				? `<div class="notice">🔗 Synchronizacja: <code>${escapeHtml(targets.join(' + '))}</code> — najniższe saldo dnia i najwcześniejszy start wygrywają, więc wszystkie maszyny widzą ten sam dzienny koszt.</div>`
-				: `<div class="notice">💡 Skonfiguruj <code>aiBalance.dailyCosts.remoteToken</code> (webitcache) lub wspólny plik OneDrive/Dropbox, aby wszystkie komputery widziały ten sam dzienny koszt.</div>`;
+				? `<div class="notice">🔗 Synchronizacja: <code>${escapeHtml(targets.join(' + '))}</code> — dzień liczony w <b>UTC</b>: pierwszy odczyt po 00:00 UTC ustala saldo startowe, kolejne komputery tylko je odczytują, a najniższe saldo dnia zamyka kalkulację.</div>`
+				: `<div class="notice">💡 Dzień liczony w <b>UTC</b>. Skonfiguruj <code>aiBalance.dailyCosts.remoteToken</code> (webitcache) lub wspólny plik OneDrive/Dropbox, aby wszystkie komputery widziały to samo saldo startowe i ten sam dzienny koszt.</div>`;
 
 		return cards + chart + table + syncNote;
 	}

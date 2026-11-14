@@ -169,8 +169,8 @@ class StatusBarManager {
             syncTargets.push(sharedPath);
         }
         const syncLine = syncTargets.length > 0
-            ? `🔗 **Sync:** ${syncTargets.join(' + ')}`
-            : '🔗 **Sync:** tylko ten komputer';
+            ? `🔗 **Sync:** ${syncTargets.join(' + ')} · 🕛 dzień od **00:00 UTC**`
+            : '🔗 **Sync:** tylko ten komputer · 🕛 dzień od **00:00 UTC**';
         this.snapshot = {
             providerParts,
             rows,

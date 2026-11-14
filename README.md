@@ -9,8 +9,8 @@ Shows DeepSeek and OpenRouter API balance in the VS Code status bar.
 
 - **Status bar display** — shows balances for DeepSeek and OpenRouter providers
 - **Peak-hours countdown** — 🔴/🟢 indicator with a live h:mm countdown to the next peak/off-peak switch (weekends are always off-peak)
-- **Daily cost tracking** — estimates daily spend from the earliest and latest balance reading of each day; today's cost is shown in the status bar and in the tooltip (today + current month)
-- **webitcache sync (default)** — all computers using the same token share the **lowest balance of the day**, so daily costs match even if a machine was offline at midnight
+- **Daily cost tracking** — estimates daily spend from balance snapshots taken during the day; today's cost is shown in the status bar and in the tooltip (today + current month). **Day boundaries are always UTC (00:00 UTC)**, not local midnight
+- **webitcache sync (default)** — the computer that reads first in the UTC day publishes its balance as the **day-start**; every other computer reads that value and only adds its own observations, so all machines show the same daily cost
 - **Multi-computer sync (optional)** — point `aiBalance.dailyCosts.sharedFilePath` at a file in OneDrive/Dropbox to share the day-start balance across machines using the same API key
 - **Model pricing in tooltip** — current DeepSeek price list per 1M tokens (peak & off-peak)
 - **Rich tooltip** — Markdown/HTML tables with balances, daily & monthly costs, token prices converted to the selected currency, peak hours and quick action links
@@ -79,15 +79,21 @@ Open VS Code settings (`Ctrl+,`) and search for `@aiBalance`:
 ## Daily cost tracking (balance snapshots)
 
 The DeepSeek/OpenRouter APIs expose only the current balance, so the extension
-records the **earliest and latest balance reading of each day** and derives the
-daily spend from the difference. The tooltip shows today's and this month's
-estimated cost; the dashboard adds a 30-day chart and a 14-day table.
+records the **first and the lowest balance reading of each day** and derives the
+daily spend from the difference. The day always starts at **00:00 UTC** — never
+at the machine's local midnight — so every computer agrees on which day a
+reading belongs to. The tooltip shows today's and this month's estimated cost;
+the dashboard adds a 30-day chart and a 14-day table.
 
-**Remote sync via webitcache (default):** every refresh pushes the lowest
-balance observed today to [webitcache](https://webitcache.analogbrain.com) and
-pulls the merged state (newest 10 entries). The **lowest value of the day
-wins** (ties → newer observation), so all computers compute the same daily
-cost even if they were offline at midnight. Configure with
+**Remote sync via webitcache (default):** the computer that performs the first
+read in the UTC day pushes its balance as the **day-start** to
+[webitcache](https://webitcache.analogbrain.com). A computer that wakes up later
+already finds that entry: it does **not** publish its own balance, it adopts the
+stored day-start and only adds its own observations (latest/lowest). Example:
+machine A reads at 01:00 UTC → saves the day-start; machine B reads at 02:00 UTC
+→ sees the existing entry, keeps it and computes its daily cost from that
+baseline. The cache is re-published only when the merged state actually changes
+(a lower balance later in the day). Configure with
 `aiBalance.dailyCosts.remoteUrl` / `remoteToken` (the same token on every
 machine); leave either empty to disable. ⚠️ The token is shared storage:
 anyone who has it can read/write that cache — keep the repository private or
@@ -104,7 +110,7 @@ spend even if only one of them ran at midnight. Cloud conflict copies
 (`daily-costs (1).json`, `daily-costs-<PC>.json`) are detected and merged too.
 
 Caveats:
-- The day starts at the first reading, which may be later than 00:00 if VS Code was not running.
+- The day starts at the first reading after 00:00 UTC, which may be later than midnight UTC if no computer was running — a computer that starts later adopts the shared day-start instead of its own balance.
 - Top-ups increase the balance and can make a day's spend look lower (clamped at 0).
 - Data is stored locally in `globalState`; the shared file is optional.
 

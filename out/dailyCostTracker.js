@@ -47,8 +47,19 @@ function emptyStore() {
 function pad2(value) {
     return value.toString().padStart(2, '0');
 }
-function localDateKey(date) {
-    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+/** UTC date key — the day boundary is 00:00 UTC on every machine. */
+function utcDateKey(date) {
+    return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
+}
+/** Stable string used to detect whether the shared state actually changed. */
+function snapshotSignature(snapshot) {
+    return Object.keys(snapshot.p)
+        .sort()
+        .map((key) => {
+        const state = snapshot.p[key];
+        return `${key}:${state.s}/${state.a}/${state.l ?? ''}/${state.t ?? ''}`;
+    })
+        .join('|');
 }
 /** Money spent during the day according to a single record. */
 function spentUsd(record) {
@@ -152,7 +163,7 @@ class DailyCostTracker {
             return;
         }
         const store = this.load();
-        const today = localDateKey(new Date());
+        const today = utcDateKey(new Date());
         const now = Date.now();
         const provider = store.providers[providerKey] ?? { records: {} };
         store.providers[providerKey] = provider;
@@ -204,7 +215,7 @@ class DailyCostTracker {
     /** Sets (or clears with null) a manual day-start balance override for today. */
     async setManualStart(providerKey, amountUsd) {
         const store = this.load();
-        const today = localDateKey(new Date());
+        const today = utcDateKey(new Date());
         const provider = store.providers[providerKey] ?? { records: {} };
         store.providers[providerKey] = provider;
         let record = provider.records[today];
@@ -238,8 +249,8 @@ class DailyCostTracker {
     }
     prune(provider, now) {
         const cutoff = new Date(now);
-        cutoff.setDate(cutoff.getDate() - RETENTION_DAYS);
-        const cutoffKey = localDateKey(cutoff);
+        cutoff.setUTCDate(cutoff.getUTCDate() - RETENTION_DAYS);
+        const cutoffKey = utcDateKey(cutoff);
         for (const key of Object.keys(provider.records)) {
             if (key < cutoffKey) {
                 delete provider.records[key];
@@ -248,7 +259,7 @@ class DailyCostTracker {
     }
     /** Today's estimated spend for a provider (null when no reading was recorded today). */
     getToday(providerKey) {
-        const record = this.load().providers[providerKey]?.records[localDateKey(new Date())];
+        const record = this.load().providers[providerKey]?.records[utcDateKey(new Date())];
         return record
             ? {
                 spentUsd: spentUsd(record),
@@ -258,9 +269,9 @@ class DailyCostTracker {
             }
             : null;
     }
-    /** Sum of estimated spend for the current calendar month. */
+    /** Sum of estimated spend for the current UTC calendar month. */
     getMonth(providerKey) {
-        const prefix = localDateKey(new Date()).slice(0, 7); // YYYY-MM
+        const prefix = utcDateKey(new Date()).slice(0, 7); // YYYY-MM
         const records = this.load().providers[providerKey]?.records ?? {};
         let total = 0;
         for (const [key, record] of Object.entries(records)) {
@@ -270,9 +281,9 @@ class DailyCostTracker {
         }
         return total;
     }
-    /** Snapshot of today's lowest balances, ready to push to webitcache. */
+    /** Snapshot of today's (UTC) day-start and lowest balances, ready to push to webitcache. */
     buildTodaySnapshot() {
-        const today = localDateKey(new Date());
+        const today = utcDateKey(new Date());
         const store = this.load();
         const providers = {};
         for (const [key, data] of Object.entries(store.providers)) {
@@ -280,54 +291,73 @@ class DailyCostTracker {
             if (!record) {
                 continue;
             }
-            const min = record.dayMinBalance ?? record.lastBalance;
-            const at = record.dayMinAt ?? record.lastAt;
-            if (min === undefined) {
+            const start = record.manualStartBalance ??
+                record.startBalance ??
+                (record.metricKind === 'balance' ? record.startMetric : undefined);
+            if (start === undefined || !Number.isFinite(start) || !Number.isFinite(record.startAt)) {
                 continue;
             }
-            providers[key] = { m: min, t: at };
+            const state = { s: start, a: record.startAt };
+            const lowest = record.dayMinBalance ?? record.lastBalance;
+            if (lowest !== undefined && Number.isFinite(lowest)) {
+                state.l = lowest;
+                state.t = record.dayMinAt ?? record.lastAt;
+            }
+            providers[key] = state;
         }
-        return Object.keys(providers).length > 0 ? { v: 1, date: today, p: providers } : null;
+        return Object.keys(providers).length > 0 ? { v: 2, d: today, p: providers } : null;
     }
-    /** Merges the remote lowest-balance-of-the-day state into the local records. */
+    /**
+     * Merges the shared UTC-day state into the local records: an earlier
+     * day-start from another computer replaces ours (we never push our own
+     * balance over an existing baseline) and the lowest balance wins for the
+     * day-end estimate.
+     */
     async applyRemoteSnapshot(snapshot) {
         if (!snapshot) {
             return;
         }
-        const today = localDateKey(new Date());
-        if (snapshot.date !== today) {
+        const today = utcDateKey(new Date());
+        if (snapshot.d !== today) {
             return;
         }
         const store = this.load();
         let changed = false;
         for (const [provider, remote] of Object.entries(snapshot.p)) {
-            if (!Number.isFinite(remote.m)) {
+            if (!remote || !Number.isFinite(remote.s) || !Number.isFinite(remote.a)) {
                 continue;
             }
             const providerStore = store.providers[provider] ?? { records: {} };
             store.providers[provider] = providerStore;
             let record = providerStore.records[today];
             if (!record) {
-                const t = Number.isFinite(remote.t) ? remote.t : Date.now();
                 record = {
                     date: today,
-                    startMetric: remote.m,
-                    startAt: t,
-                    lastMetric: remote.m,
-                    lastAt: t,
+                    startMetric: remote.s,
+                    startAt: remote.a,
+                    lastMetric: remote.s,
+                    lastAt: remote.a,
                     metricKind: 'balance',
-                    startBalance: remote.m,
-                    lastBalance: remote.m,
-                    dayMinBalance: remote.m,
-                    dayMinAt: t
+                    startBalance: remote.s,
+                    lastBalance: remote.s
                 };
                 providerStore.records[today] = record;
                 changed = true;
             }
-            else if (record.dayMinBalance === undefined ||
-                remote.m < record.dayMinBalance ||
-                (remote.m === record.dayMinBalance && remote.t > (record.dayMinAt ?? 0))) {
-                record.dayMinBalance = remote.m;
+            else if (remote.a < record.startAt && record.metricKind === 'balance') {
+                // Another computer was first in this UTC day — adopt its baseline
+                record.startMetric = remote.s;
+                record.startAt = remote.a;
+                record.startBalance = remote.s;
+                changed = true;
+            }
+            const lowest = remote.l;
+            if (lowest !== undefined &&
+                Number.isFinite(lowest) &&
+                (record.dayMinBalance === undefined ||
+                    lowest < record.dayMinBalance ||
+                    (lowest === record.dayMinBalance && (remote.t ?? 0) > (record.dayMinAt ?? 0)))) {
+                record.dayMinBalance = lowest;
                 record.dayMinAt = remote.t;
                 changed = true;
             }
@@ -337,32 +367,41 @@ class DailyCostTracker {
             await this.syncSharedFile(store);
         }
     }
-    /** Pulls the shared state, merges it locally, then pushes the merged day state. */
+    /**
+     * Pulls the shared state, merges it locally, then publishes the merged UTC-day
+     * state — but only when it actually differs from what is already stored, so a
+     * computer that wakes up after another one keeps the existing day-start
+     * instead of overwriting it with its own balance.
+     */
     async syncRemote() {
         if (!this.remote) {
             return;
         }
-        const today = localDateKey(new Date());
+        const today = utcDateKey(new Date());
         const remote = await this.remote.pull(today);
         if (!remote.ok) {
             return; // service unreachable / token rejected — skip push
         }
         await this.applyRemoteSnapshot(remote.snapshot);
         const snapshot = this.buildTodaySnapshot();
-        if (snapshot) {
-            await this.remote.push(snapshot);
+        if (!snapshot) {
+            return;
         }
+        if (remote.snapshot && snapshotSignature(remote.snapshot) === snapshotSignature(snapshot)) {
+            return; // unchanged — leave the stored entry untouched
+        }
+        await this.remote.push(snapshot);
     }
-    /** Daily totals for the last `days` days (oldest first), summed across providers. */
+    /** Daily totals for the last `days` UTC days (oldest first), summed across providers. */
     getRecentDays(days) {
         const store = this.load();
         const result = [];
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        today.setUTCHours(0, 0, 0, 0);
         for (let offset = days - 1; offset >= 0; offset--) {
             const day = new Date(today);
-            day.setDate(day.getDate() - offset);
-            const key = localDateKey(day);
+            day.setUTCDate(day.getUTCDate() - offset);
+            const key = utcDateKey(day);
             const byProvider = {};
             let total = 0;
             for (const [provider, data] of Object.entries(store.providers)) {
@@ -373,7 +412,7 @@ class DailyCostTracker {
                     total += value;
                 }
             }
-            result.push({ date: key, label: String(day.getDate()), total, byProvider });
+            result.push({ date: key, label: String(day.getUTCDate()), total, byProvider });
         }
         return result;
     }

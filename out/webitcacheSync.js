@@ -76,8 +76,9 @@ async function post(path, body) {
 }
 class WebitcacheClient {
     /**
-     * Reads the newest 10 entries and merges today's state:
-     * the lowest balance wins; on equal values the newer timestamp wins.
+     * Reads the newest 10 entries and merges today's (UTC) state:
+     * the EARLIEST day-start wins (a computer that starts later never replaces
+     * it) and the lowest balance wins for the day-end estimate.
      * Falls back to `/read` when history is unavailable/empty.
      */
     async pull(today) {
@@ -99,7 +100,7 @@ class WebitcacheClient {
                 entries = [latest];
             }
         }
-        const merged = { v: 1, date: today, p: {} };
+        const merged = { v: 2, d: today, p: {} };
         for (const entry of entries) {
             if (!entry || typeof entry.data !== 'string') {
                 continue;
@@ -111,22 +112,36 @@ class WebitcacheClient {
             catch {
                 continue;
             }
-            if (!snapshot || snapshot.v !== 1 || snapshot.date !== today || !snapshot.p) {
-                continue;
+            if (!snapshot || snapshot.v !== 2 || snapshot.d !== today || !snapshot.p) {
+                continue; // v1 entries used the lowest-balance-only format
             }
             for (const [provider, state] of Object.entries(snapshot.p)) {
-                if (!state || !Number.isFinite(state.m) || !Number.isFinite(state.t)) {
+                if (!state || !Number.isFinite(state.s) || !Number.isFinite(state.a)) {
                     continue;
                 }
                 const current = merged.p[provider];
-                if (!current || state.m < current.m || (state.m === current.m && state.t > current.t)) {
-                    merged.p[provider] = { m: state.m, t: state.t };
+                if (!current) {
+                    merged.p[provider] = { ...state };
+                    continue;
+                }
+                // Day-start: the earliest observation of the UTC day always wins
+                if (state.a < current.a) {
+                    current.s = state.s;
+                    current.a = state.a;
+                }
+                // Day-end: the lowest balance wins, ties → newer observation
+                if (state.l !== undefined &&
+                    (current.l === undefined ||
+                        state.l < current.l ||
+                        (state.l === current.l && (state.t ?? 0) > (current.t ?? 0)))) {
+                    current.l = state.l;
+                    current.t = state.t;
                 }
             }
         }
         return { ok: true, snapshot: Object.keys(merged.p).length > 0 ? merged : null };
     }
-    /** Pushes today's lowest-balance snapshot (ignored when over the 255-char limit). */
+    /** Publishes the merged UTC-day state (ignored when over the 255-char limit). */
     async push(snapshot) {
         const data = JSON.stringify(snapshot);
         if (data.length <= 255) {

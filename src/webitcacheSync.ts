@@ -4,8 +4,10 @@ import * as vscode from 'vscode';
  * webitcache (https://webitcache.analogbrain.com) client.
  *
  * The service stores one small JSON value per account (≤255 chars) plus the
- * last 10 entries with UTC timestamps. We use it to share the LOWEST balance
- * observed during the day across all computers using the same token.
+ * last 10 entries with UTC timestamps. We use it to share the FIRST balance
+ * observed in the current UTC day (the day-start), so every computer computes
+ * its daily spend from the same baseline — a machine that wakes up later only
+ * reads the stored day-start instead of publishing its own balance.
  *
  * Endpoints (all POST, Bearer token):
  *   /webitcache/save    { data: "<string ≤255>" }
@@ -14,17 +16,21 @@ import * as vscode from 'vscode';
  */
 
 export interface RemoteProviderState {
-	/** Lowest balance observed today (USD). */
-	m: number;
-	/** Epoch ms when that lowest balance was observed. */
-	t: number;
+	/** Day-start balance (USD) — the first observation of the current UTC day. */
+	s: number;
+	/** Epoch ms of that first observation. */
+	a: number;
+	/** Lowest balance observed so far that UTC day (USD). */
+	l?: number;
+	/** Epoch ms of the lowest observation. */
+	t?: number;
 }
 
 export interface RemoteSnapshot {
-	v: 1;
-	/** Local date key, e.g. "2026-11-14". */
-	date: string;
-	/** Per-provider lowest balance of the day. */
+	v: 2;
+	/** UTC date key (day boundary = 00:00 UTC), e.g. "2026-11-14". */
+	d: string;
+	/** Per-provider state of the current UTC day. */
 	p: Record<string, RemoteProviderState>;
 }
 
@@ -75,8 +81,9 @@ async function post(path: string, body: unknown): Promise<any | null> {
 
 export class WebitcacheClient {
 	/**
-	 * Reads the newest 10 entries and merges today's state:
-	 * the lowest balance wins; on equal values the newer timestamp wins.
+	 * Reads the newest 10 entries and merges today's (UTC) state:
+	 * the EARLIEST day-start wins (a computer that starts later never replaces
+	 * it) and the lowest balance wins for the day-end estimate.
 	 * Falls back to `/read` when history is unavailable/empty.
 	 */
 	async pull(today: string): Promise<{ ok: boolean; snapshot: RemoteSnapshot | null }> {
@@ -100,7 +107,7 @@ export class WebitcacheClient {
 			}
 		}
 
-		const merged: RemoteSnapshot = { v: 1, date: today, p: {} };
+		const merged: RemoteSnapshot = { v: 2, d: today, p: {} };
 
 		for (const entry of entries) {
 			if (!entry || typeof entry.data !== 'string') {
@@ -114,17 +121,33 @@ export class WebitcacheClient {
 				continue;
 			}
 
-			if (!snapshot || snapshot.v !== 1 || snapshot.date !== today || !snapshot.p) {
-				continue;
+			if (!snapshot || snapshot.v !== 2 || snapshot.d !== today || !snapshot.p) {
+				continue; // v1 entries used the lowest-balance-only format
 			}
 
 			for (const [provider, state] of Object.entries(snapshot.p)) {
-				if (!state || !Number.isFinite(state.m) || !Number.isFinite(state.t)) {
+				if (!state || !Number.isFinite(state.s) || !Number.isFinite(state.a)) {
 					continue;
 				}
 				const current = merged.p[provider];
-				if (!current || state.m < current.m || (state.m === current.m && state.t > current.t)) {
-					merged.p[provider] = { m: state.m, t: state.t };
+				if (!current) {
+					merged.p[provider] = { ...state };
+					continue;
+				}
+				// Day-start: the earliest observation of the UTC day always wins
+				if (state.a < current.a) {
+					current.s = state.s;
+					current.a = state.a;
+				}
+				// Day-end: the lowest balance wins, ties → newer observation
+				if (
+					state.l !== undefined &&
+					(current.l === undefined ||
+						state.l < current.l ||
+						(state.l === current.l && (state.t ?? 0) > (current.t ?? 0)))
+				) {
+					current.l = state.l;
+					current.t = state.t;
 				}
 			}
 		}
@@ -132,7 +155,7 @@ export class WebitcacheClient {
 		return { ok: true, snapshot: Object.keys(merged.p).length > 0 ? merged : null };
 	}
 
-	/** Pushes today's lowest-balance snapshot (ignored when over the 255-char limit). */
+	/** Publishes the merged UTC-day state (ignored when over the 255-char limit). */
 	async push(snapshot: RemoteSnapshot): Promise<void> {
 		const data = JSON.stringify(snapshot);
 		if (data.length <= 255) {
