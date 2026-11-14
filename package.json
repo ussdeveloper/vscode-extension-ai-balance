@@ -2,7 +2,7 @@
   "name": "ai-balance",
   "displayName": "AI Balance",
   "description": "Shows DeepSeek and OpenRouter API balance in the status bar",
-  "version": "0.3.0",
+  "version": "0.6.0",
   "publisher": "sulaco",
   "icon": "icons/deepseek.png",
   "license": "MIT",
@@ -37,6 +37,10 @@
       {
         "command": "aiBalance.clearKeys",
         "title": "AI Balance: Clear All API Keys"
+      },
+      {
+        "command": "aiBalance.openDashboard",
+        "title": "AI Balance: Open Usage Dashboard"
       }
     ],
     "configuration": {
@@ -98,13 +102,18 @@
           "type": "string",
           "default": "#D4A017",
           "description": "Text color for the status bar balance display (CSS color or empty for default)"
+        },
+        "aiBalance.dailyCosts.sharedFilePath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to a shared JSON file (e.g. in OneDrive/Dropbox) that syncs daily balance baselines across computers using the same API key. Leave empty for local-only tracking."
         }
       }
     }
   },
   "scripts": {
     "compile": "tsc -p tsconfig.json",
-    "package": "vsce package --allow-missing-repository",
+    "package": "vsce package --allow-missing-repository --no-dependencies",
     "watch": "tsc -watch -p tsconfig.json"
   },
   "repository": {

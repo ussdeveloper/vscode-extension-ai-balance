@@ -19,17 +19,20 @@ ai-balance/
     ├── currencyConverter.ts  # USD conversion (open.er-api.com, 24h cache)
     ├── peakUtils.ts          # Peak/off-peak hours, weekend rules, countdown
     ├── pricing.ts            # DeepSeek model prices for the tooltip
+    ├── dailyCostTracker.ts   # Daily balance baselines + optional shared-file sync
+    ├── formatUtils.ts        # Number/cost formatting helpers
+    ├── dashboardPanel.ts     # Webview dashboard tab (balances, daily cost chart/table)
     └── statusBarManager.ts   # Status bar display + tooltip (countdown tick)
 ```
 
 ## Key Facts
 - **VS Code Insiders path**: `C:\Users\sulaco\AppData\Local\Programs\Microsoft VS Code Insiders`
 - **Install command**: `& "<insiders-dir>\bin\code-insiders.cmd" --install-extension "<vsix-path>" --force`
-- **Build**: `npx tsc -p tsconfig.json` then `npx vsce package --allow-missing-repository`
+- **Build**: `npx tsc -p tsconfig.json` then `npx vsce package --allow-missing-repository --no-dependencies` (npm's `list` is broken on this machine)
 - **API keys** are stored securely via VS Code SecretStorage (OS keychain), NOT in settings.json
 - **Settings prefix**: `aiBalance.*` (search `@aiBalance` in settings)
-- **Commands**: `aiBalance.refresh`, `aiBalance.configure`, `aiBalance.setDeepSeekKey`, `aiBalance.setOpenRouterKey`, `aiBalance.clearKeys`
-- **Daily usage estimate** persists a per-day baseline in `context.globalState` (`aiBalance.dailyBaseline.<provider>`)
+- **Commands**: `aiBalance.refresh`, `aiBalance.configure`, `aiBalance.setDeepSeekKey`, `aiBalance.setOpenRouterKey`, `aiBalance.clearKeys`, `aiBalance.openDashboard`, `aiBalance.dashboardRefresh` (internal, used by the dashboard buttons)
+- **Daily costs** stored in `context.globalState` (`aiBalance.dailyCosts.v2`); optional cross-computer sync via `aiBalance.dailyCosts.sharedFilePath` (earliest day-start wins)
 
 ## Constraints
 - DO NOT store API keys in settings.json — use SecretStorage (`context.secrets.store/get/delete`)
@@ -54,8 +57,8 @@ ai-balance/
 ## Status Bar Display
 - Left-aligned, monochrome Codicon icons: `$(hubot)` for DeepSeek, `$(radio-tower)` for OpenRouter
 - Peak dot `🔴`/`🟢` followed by a live h:mm countdown to the next peak/off-peak switch (weekends off-peak; re-rendered every 30 s from system time, no API calls)
-- Click opens settings (`@aiBalance`) or prompts for API keys if missing
-- Tooltip: balances, today's estimated usage cost, DeepSeek model pricing (peak/off-peak), peak-hour details
+- Click opens the usage dashboard tab (settings / token / platform buttons are inside); legacy `aiBalance.configure` still opens settings
+- Tooltip: balances, today's + this month's estimated cost (balance snapshots), model pricing (peak/off-peak), peak-hour details
 
 ## Provider Knowledge
 Use the `ai-providers` skill for comprehensive knowledge about AI model providers, their APIs, authentication methods, and model listings. Load with: `/ai-providers`

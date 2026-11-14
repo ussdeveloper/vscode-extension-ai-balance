@@ -9,8 +9,10 @@ Shows DeepSeek and OpenRouter API balance in the VS Code status bar.
 
 - **Status bar display** — shows balances for DeepSeek and OpenRouter providers
 - **Peak-hours countdown** — 🔴/🟢 indicator with a live h:mm countdown to the next peak/off-peak switch (weekends are always off-peak)
-- **Daily usage estimate** — approximate cost of today's usage in the tooltip
+- **Daily cost tracking** — estimates daily spend from the earliest and latest balance reading of each day (today + current month in the tooltip)
+- **Multi-computer sync (optional)** — point `aiBalance.dailyCosts.sharedFilePath` at a file in OneDrive/Dropbox to share the day-start balance across machines using the same API key
 - **Model pricing in tooltip** — current DeepSeek price list per 1M tokens (peak & off-peak)
+- **Usage dashboard tab** — click the status bar item to open a dashboard: balance cards, 30-day cost chart, 14-day table, live peak-hours state
 - **Monochrome Codicon icons** — `$(hubot)` for DeepSeek, `$(radio-tower)` for OpenRouter
 - **Secure API key storage** — keys stored in OS keychain via VS Code SecretStorage API
 - **Currency conversion** — convert USD to EUR, PLN, GBP, JPY and more (via free open.er-api.com, cached 24h)
@@ -52,6 +54,7 @@ Open VS Code settings (`Ctrl+,`) and search for `@aiBalance`:
 | `AI Balance: Set DeepSeek API Key` | Securely store DeepSeek API key |
 | `AI Balance: Set OpenRouter API Key` | Securely store OpenRouter API key |
 | `AI Balance: Clear All API Keys` | Remove all stored API keys |
+| `AI Balance: Open Usage Dashboard` | Open the usage dashboard tab (or click the status bar item) |
 
 ## API Endpoints
 
@@ -64,6 +67,24 @@ Open VS Code settings (`Ctrl+,`) and search for `@aiBalance`:
 
 ### Exchange Rates
 - `GET https://open.er-api.com/v6/latest/USD` (free, no key required, cached 24h)
+
+## Daily cost tracking (balance snapshots)
+
+The DeepSeek/OpenRouter APIs expose only the current balance, so the extension
+records the **earliest and latest balance reading of each day** and derives the
+daily spend from the difference. The tooltip shows today's and this month's
+estimated cost; the dashboard adds a 30-day chart and a 14-day table.
+
+**Sharing across computers (same API key):** set
+`aiBalance.dailyCosts.sharedFilePath` to a JSON file in a synced folder
+(OneDrive, Dropbox, network share). Every machine merges its observations —
+the earliest day-start and the latest day-end win — so all machines agree on
+the daily spend even if only one of them ran at midnight.
+
+Caveats:
+- The day starts at the first reading, which may be later than 00:00 if VS Code was not running.
+- Top-ups increase the balance and can make a day's spend look lower (clamped at 0).
+- Data is stored locally in `globalState`; the shared file is optional.
 
 ## Development
 
@@ -88,5 +109,6 @@ npm run package
 - Status bar only supports monochrome Codicon icons (no custom SVG/images)
 - Exchange rates cached for 24 hours to minimize API calls
 - DeepSeek balance endpoint may change — uses `/user/balance`
-- Daily usage cost is an estimate (balance difference since the first reading of the day; top-ups can skew it)
+- Daily cost is an estimate from the first/last balance reading of the day; if VS Code was not running at midnight the day starts later
+- Top-ups increase the balance and can skew (underestimate) a day's cost
 - Model prices are informational and may change — see https://api-docs.deepseek.com/quick_start/pricing

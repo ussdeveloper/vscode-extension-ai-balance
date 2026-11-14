@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import { BalanceProvider } from './balanceProvider.js';
 import { StatusBarManager } from './statusBarManager.js';
+import { DailyCostTracker } from './dailyCostTracker.js';
+import { CurrencyConverter } from './currencyConverter.js';
+import { DashboardPanel } from './dashboardPanel.js';
 
 let balanceProvider: BalanceProvider;
 let statusBarManager: StatusBarManager;
@@ -10,7 +13,9 @@ export async function activate(context: vscode.ExtensionContext) {
 	console.log('AI Balance extension activating...');
 
 	balanceProvider = new BalanceProvider(context.secrets);
-	statusBarManager = new StatusBarManager(balanceProvider, context);
+	const costTracker = new DailyCostTracker(context);
+	const currencyConverter = new CurrencyConverter();
+	statusBarManager = new StatusBarManager(balanceProvider, costTracker, currencyConverter);
 
 	// Register commands
 	const refreshCmd = vscode.commands.registerCommand('aiBalance.refresh', () => {
@@ -101,9 +106,18 @@ export async function activate(context: vscode.ExtensionContext) {
 		statusBarManager.refresh();
 	});
 
+	const openDashboardCmd = vscode.commands.registerCommand('aiBalance.openDashboard', () => {
+		DashboardPanel.createOrShow(context, balanceProvider, costTracker, currencyConverter);
+	});
+
+	const dashboardRefreshCmd = vscode.commands.registerCommand('aiBalance.dashboardRefresh', () => {
+		DashboardPanel.refreshCurrent(true);
+	});
+
 	context.subscriptions.push(
 		refreshCmd, configureCmd,
 		setDeepSeekKeyCmd, setOpenRouterKeyCmd, clearKeysCmd,
+		openDashboardCmd, dashboardRefreshCmd,
 		statusBarManager
 	);
 

@@ -38,13 +38,18 @@ exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const balanceProvider_js_1 = require("./balanceProvider.js");
 const statusBarManager_js_1 = require("./statusBarManager.js");
+const dailyCostTracker_js_1 = require("./dailyCostTracker.js");
+const currencyConverter_js_1 = require("./currencyConverter.js");
+const dashboardPanel_js_1 = require("./dashboardPanel.js");
 let balanceProvider;
 let statusBarManager;
 let refreshTimer;
 async function activate(context) {
     console.log('AI Balance extension activating...');
     balanceProvider = new balanceProvider_js_1.BalanceProvider(context.secrets);
-    statusBarManager = new statusBarManager_js_1.StatusBarManager(balanceProvider, context);
+    const costTracker = new dailyCostTracker_js_1.DailyCostTracker(context);
+    const currencyConverter = new currencyConverter_js_1.CurrencyConverter();
+    statusBarManager = new statusBarManager_js_1.StatusBarManager(balanceProvider, costTracker, currencyConverter);
     // Register commands
     const refreshCmd = vscode.commands.registerCommand('aiBalance.refresh', () => {
         statusBarManager.refresh();
@@ -122,7 +127,13 @@ async function activate(context) {
         vscode.window.showInformationMessage('All AI Balance API keys cleared');
         statusBarManager.refresh();
     });
-    context.subscriptions.push(refreshCmd, configureCmd, setDeepSeekKeyCmd, setOpenRouterKeyCmd, clearKeysCmd, statusBarManager);
+    const openDashboardCmd = vscode.commands.registerCommand('aiBalance.openDashboard', () => {
+        dashboardPanel_js_1.DashboardPanel.createOrShow(context, balanceProvider, costTracker, currencyConverter);
+    });
+    const dashboardRefreshCmd = vscode.commands.registerCommand('aiBalance.dashboardRefresh', () => {
+        dashboardPanel_js_1.DashboardPanel.refreshCurrent(true);
+    });
+    context.subscriptions.push(refreshCmd, configureCmd, setDeepSeekKeyCmd, setOpenRouterKeyCmd, clearKeysCmd, openDashboardCmd, dashboardRefreshCmd, statusBarManager);
     // Listen for config changes → re-refresh
     const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration('aiBalance')) {

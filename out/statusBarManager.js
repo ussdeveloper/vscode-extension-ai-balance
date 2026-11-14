@@ -38,20 +38,21 @@ const vscode = __importStar(require("vscode"));
 const currencyConverter_js_1 = require("./currencyConverter.js");
 const peakUtils_js_1 = require("./peakUtils.js");
 const pricing_js_1 = require("./pricing.js");
+const formatUtils_js_1 = require("./formatUtils.js");
 class StatusBarManager {
     statusBarItem;
     provider;
     currencyConverter;
-    extensionContext;
+    costTracker;
     tickTimer;
     snapshot = null;
-    constructor(provider, context) {
+    constructor(provider, costTracker, currencyConverter) {
         this.provider = provider;
-        this.extensionContext = context;
-        this.currencyConverter = new currencyConverter_js_1.CurrencyConverter();
+        this.costTracker = costTracker;
+        this.currencyConverter = currencyConverter;
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-        this.statusBarItem.command = 'aiBalance.configure';
-        this.statusBarItem.tooltip = 'AI Balance — click to open settings';
+        this.statusBarItem.command = 'aiBalance.openDashboard';
+        this.statusBarItem.tooltip = 'AI Balance — click to open dashboard';
         this.updateVisibility();
         // Live countdown tick — pure local re-render from system time, no API calls
         this.tickTimer = setInterval(() => this.render(), 30_000);
@@ -120,6 +121,14 @@ class StatusBarManager {
                 }
             }
         }
+        // Track daily cost baselines: first (and latest) balance/usage reading of the day
+        for (const r of results) {
+            if (r.balance === null) {
+                continue;
+            }
+            const useUsage = typeof r.usage === 'number';
+            await this.costTracker.track(r.key, useUsage ? r.usage : r.balance, useUsage ? 'usage' : 'balance');
+        }
         const dailyUsageLines = await this.computeDailyUsage(results, targetCurrency, currencySymbol);
         this.snapshot = { providerParts, tooltipLines, dailyUsageLines };
         this.render();
@@ -160,54 +169,45 @@ class StatusBarManager {
         if (this.snapshot.dailyUsageLines.length > 0) {
             sections.push('---', ...this.snapshot.dailyUsageLines);
         }
-        sections.push('---', peakInfo, countdownInfo, (0, peakUtils_js_1.getPeakHoursDescription)().split('\n').slice(1).join('\n'), '---', ...(0, pricing_js_1.getModelPricingLines)(), '---', 'Click to open settings', 'Use "AI Balance: Set ... Key" commands to add API keys');
+        sections.push('---', peakInfo, countdownInfo, (0, peakUtils_js_1.getPeakHoursDescription)().split('\n').slice(1).join('\n'), '---', ...(0, pricing_js_1.getModelPricingLines)(), '---', 'Click the status bar item to open the usage dashboard', 'Use "AI Balance: Set ... Key" commands to add API keys');
         this.statusBarItem.tooltip = sections.join('\n');
     }
-    /** Local (system) date key, e.g. "2026-09-11". */
-    static localDateKey(date) {
-        const y = date.getFullYear();
-        const m = (date.getMonth() + 1).toString().padStart(2, '0');
-        const d = date.getDate().toString().padStart(2, '0');
-        return `${y}-${m}-${d}`;
+    /** Formats a USD cost, converting to the display currency when configured. */
+    async formatCost(usd, targetCurrency, currencySymbol) {
+        const usdStr = (0, formatUtils_js_1.formatUsdAmount)(usd);
+        if (targetCurrency === 'USD') {
+            return usdStr;
+        }
+        const conv = await this.currencyConverter.convert(usd, targetCurrency);
+        return `${usdStr} (${currencySymbol}${conv.amount.toFixed(2)})`;
     }
     /**
-     * Approximate cost of today's usage (system local day): compares the current
-     * balance/usage with the first reading of the day, persisted in globalState.
-     * DeepSeek exposes no usage API, so its value is an estimate (top-ups can
-     * skew it); OpenRouter uses its cumulative `usage` counter.
+     * Estimated daily/monthly cost from balance snapshots: the earliest and
+     * latest reading of each day (persisted by DailyCostTracker; optionally
+     * synced across computers via a shared file). Top-ups can skew values.
      */
     async computeDailyUsage(results, targetCurrency, currencySymbol) {
-        const today = StatusBarManager.localDateKey(new Date());
         const lines = [];
+        const monthLabel = StatusBarManager.monthLabel(new Date());
         for (const r of results) {
             if (r.balance === null) {
                 continue;
             }
-            const useUsage = typeof r.usage === 'number';
-            const metric = useUsage ? r.usage : r.balance;
-            const stateKey = `aiBalance.dailyBaseline.${r.key}`;
-            const stored = this.extensionContext.globalState.get(stateKey);
-            let spentUsd = 0;
-            if (stored && stored.date === today) {
-                // usage grows with spend, balance shrinks — normalise both to "spent"
-                const delta = useUsage ? metric - stored.metric : stored.metric - metric;
-                spentUsd = Math.max(delta, 0);
-            }
-            else {
-                await this.extensionContext.globalState.update(stateKey, { date: today, metric });
-            }
-            if (targetCurrency !== 'USD') {
-                const conv = await this.currencyConverter.convert(spentUsd, targetCurrency);
-                lines.push(`📊 ${r.name} — dziś: ~$${spentUsd.toFixed(4)} (${currencySymbol}${conv.amount.toFixed(4)})`);
-            }
-            else {
-                lines.push(`📊 ${r.name} — dziś: ~$${spentUsd.toFixed(4)}`);
-            }
+            const today = this.costTracker.getToday(r.key);
+            const month = this.costTracker.getMonth(r.key);
+            const todayStr = await this.formatCost(today?.spentUsd ?? 0, targetCurrency, currencySymbol);
+            const monthStr = await this.formatCost(month, targetCurrency, currencySymbol);
+            lines.push(`📊 ${r.name} — dziś: ~${todayStr} · ${monthLabel}: ~${monthStr}`);
         }
         if (lines.length > 0) {
-            lines.unshift('Koszt użycia dzisiaj (szacunek od pierwszego odczytu dnia):');
+            lines.unshift('Koszty dzienne (od pierwszego odczytu salda dnia):');
         }
         return lines;
+    }
+    /** Localized month name, e.g. "Listopad". */
+    static monthLabel(date) {
+        const label = date.toLocaleDateString('pl-PL', { month: 'long' });
+        return label.charAt(0).toUpperCase() + label.slice(1);
     }
     dispose() {
         if (this.tickTimer) {
