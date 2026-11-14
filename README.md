@@ -10,6 +10,7 @@ Shows DeepSeek and OpenRouter API balance in the VS Code status bar.
 - **Status bar display** — shows balances for DeepSeek and OpenRouter providers
 - **Peak-hours countdown** — 🔴/🟢 indicator with a live h:mm countdown to the next peak/off-peak switch (weekends are always off-peak)
 - **Daily cost tracking** — estimates daily spend from the earliest and latest balance reading of each day; today's cost is shown in the status bar and in the tooltip (today + current month)
+- **webitcache sync (default)** — all computers using the same token share the **lowest balance of the day**, so daily costs match even if a machine was offline at midnight
 - **Multi-computer sync (optional)** — point `aiBalance.dailyCosts.sharedFilePath` at a file in OneDrive/Dropbox to share the day-start balance across machines using the same API key
 - **Model pricing in tooltip** — current DeepSeek price list per 1M tokens (peak & off-peak)
 - **Usage dashboard tab** — click the status bar item to open a dashboard: balance cards, 30-day cost chart, 14-day table, live peak-hours state
@@ -45,6 +46,8 @@ Open VS Code settings (`Ctrl+,`) and search for `@aiBalance`:
 | `aiBalance.display.showInStatusBar` | boolean | `true` | Show in status bar |
 | `aiBalance.display.showDailyCost` | boolean | `true` | Show today's estimated cost in the status bar |
 | `aiBalance.dailyCosts.sharedFilePath` | string | `""` | Shared JSON file to sync daily cost baselines across computers |
+| `aiBalance.dailyCosts.remoteUrl` | string | `https://webitcache.analogbrain.com` | webitcache base URL (empty = disable remote sync) |
+| `aiBalance.dailyCosts.remoteToken` | string | `w-_TFr...sx7U` | webitcache Bearer token — same on every computer |
 | `aiBalance.refreshInterval` | number | `300` | Auto-refresh in seconds (0=off) |
 
 ## Commands
@@ -78,6 +81,16 @@ The DeepSeek/OpenRouter APIs expose only the current balance, so the extension
 records the **earliest and latest balance reading of each day** and derives the
 daily spend from the difference. The tooltip shows today's and this month's
 estimated cost; the dashboard adds a 30-day chart and a 14-day table.
+
+**Remote sync via webitcache (default):** every refresh pushes the lowest
+balance observed today to [webitcache](https://webitcache.analogbrain.com) and
+pulls the merged state (newest 10 entries). The **lowest value of the day
+wins** (ties → newer observation), so all computers compute the same daily
+cost even if they were offline at midnight. Configure with
+`aiBalance.dailyCosts.remoteUrl` / `remoteToken` (the same token on every
+machine); leave either empty to disable. ⚠️ The token is shared storage:
+anyone who has it can read/write that cache — keep the repository private or
+change the default token.
 
 **Sharing across computers (same API key):** set
 `aiBalance.dailyCosts.sharedFilePath` to a JSON file in a synced folder

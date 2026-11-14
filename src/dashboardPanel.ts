@@ -117,6 +117,9 @@ export class DashboardPanel {
 				);
 			}
 
+			// Share the lowest balance of the day across computers (webitcache)
+			await this.costTracker.syncRemote();
+
 			const body = await this.buildBody(results, targetCurrency, symbol);
 			this.panel.webview.html = this.shell(body);
 		} catch (err: any) {
@@ -259,13 +262,22 @@ export class DashboardPanel {
 		const table = `<div class="card chartCard"><div class="chart-title"><span>Ostatnie 14 dni</span></div>
 			<table><thead><tr><th>Data</th>${providerCols}<th class="num">Razem</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 
-		const sharedPath = vscode.workspace
-			.getConfiguration('aiBalance')
-			.get<string>('dailyCosts.sharedFilePath', '')
-			.trim();
-		const syncNote = sharedPath
-			? `<div class="notice">🔗 Synchronizacja między komputerami: <code>${escapeHtml(sharedPath)}</code> — najwcześniejszy odczyt dnia wygrywa, więc wszystkie maszyny widzą ten sam dzienny koszt.</div>`
-			: `<div class="notice">💡 Wszystkie komputery używające tego samego klucza API mogą współdzielić bazowy odczyt dnia przez wspólny plik (OneDrive/Dropbox/sieć): ustaw <code>aiBalance.dailyCosts.sharedFilePath</code>. Bez tego każdy komputer liczy od własnego pierwszego odczytu.</div>`;
+		const cfg = vscode.workspace.getConfiguration('aiBalance');
+		const sharedPath = cfg.get<string>('dailyCosts.sharedFilePath', '').trim();
+		const remoteEnabled =
+			!!cfg.get<string>('dailyCosts.remoteUrl', '').trim() &&
+			!!cfg.get<string>('dailyCosts.remoteToken', '').trim();
+		const targets: string[] = [];
+		if (remoteEnabled) {
+			targets.push('webitcache');
+		}
+		if (sharedPath) {
+			targets.push(sharedPath);
+		}
+		const syncNote =
+			targets.length > 0
+				? `<div class="notice">🔗 Synchronizacja: <code>${escapeHtml(targets.join(' + '))}</code> — najniższe saldo dnia i najwcześniejszy start wygrywają, więc wszystkie maszyny widzą ten sam dzienny koszt.</div>`
+				: `<div class="notice">💡 Skonfiguruj <code>aiBalance.dailyCosts.remoteToken</code> (webitcache) lub wspólny plik OneDrive/Dropbox, aby wszystkie komputery widziały ten sam dzienny koszt.</div>`;
 
 		return cards + chart + table + syncNote;
 	}

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { BalanceProvider } from './balanceProvider.js';
 import { StatusBarManager } from './statusBarManager.js';
 import { DailyCostTracker } from './dailyCostTracker.js';
+import { WebitcacheClient } from './webitcacheSync.js';
 import { CurrencyConverter } from './currencyConverter.js';
 import { DashboardPanel } from './dashboardPanel.js';
 
@@ -13,7 +14,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	console.log('AI Balance extension activating...');
 
 	balanceProvider = new BalanceProvider(context.secrets);
-	const costTracker = new DailyCostTracker(context);
+	const costTracker = new DailyCostTracker(context, new WebitcacheClient());
 	const currencyConverter = new CurrencyConverter();
 	statusBarManager = new StatusBarManager(balanceProvider, costTracker, currencyConverter);
 

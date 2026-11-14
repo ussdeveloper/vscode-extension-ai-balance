@@ -129,6 +129,8 @@ class StatusBarManager {
             const useUsage = typeof r.usage === 'number';
             await this.costTracker.track(r.key, useUsage ? r.usage : r.balance, useUsage ? 'usage' : 'balance', r.balance);
         }
+        // Share the lowest balance of the day across computers (webitcache)
+        await this.costTracker.syncRemote();
         const dailyUsageLines = await this.computeDailyUsage(results, targetCurrency, currencySymbol);
         // Today's total cost for the status bar (sum across providers, converted)
         let dailyCostUsd = 0;
@@ -219,13 +221,20 @@ class StatusBarManager {
         }
         if (lines.length > 0) {
             lines.unshift('Koszty dzienne (od pierwszego odczytu salda dnia):');
-            const sharedPath = vscode.workspace
-                .getConfiguration('aiBalance')
-                .get('dailyCosts.sharedFilePath', '')
-                .trim();
-            lines.push(sharedPath
-                ? `🔗 Sync między komputerami: ${sharedPath}`
-                : '🔗 Sync: tylko ten komputer — komenda "AI Balance: Set Shared Costs File" włącza współdzielenie pierwszego odczytu dnia');
+            const cfg = vscode.workspace.getConfiguration('aiBalance');
+            const sharedPath = cfg.get('dailyCosts.sharedFilePath', '').trim();
+            const remoteEnabled = !!cfg.get('dailyCosts.remoteUrl', '').trim() &&
+                !!cfg.get('dailyCosts.remoteToken', '').trim();
+            const targets = [];
+            if (remoteEnabled) {
+                targets.push('webitcache');
+            }
+            if (sharedPath) {
+                targets.push(sharedPath);
+            }
+            lines.push(targets.length > 0
+                ? `🔗 Sync: ${targets.join(' + ')}`
+                : '🔗 Sync: tylko ten komputer — użyj "AI Balance: Set Shared Costs File" lub skonfiguruj webitcache');
         }
         return lines;
     }

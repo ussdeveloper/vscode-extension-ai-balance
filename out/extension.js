@@ -39,6 +39,7 @@ const vscode = __importStar(require("vscode"));
 const balanceProvider_js_1 = require("./balanceProvider.js");
 const statusBarManager_js_1 = require("./statusBarManager.js");
 const dailyCostTracker_js_1 = require("./dailyCostTracker.js");
+const webitcacheSync_js_1 = require("./webitcacheSync.js");
 const currencyConverter_js_1 = require("./currencyConverter.js");
 const dashboardPanel_js_1 = require("./dashboardPanel.js");
 let balanceProvider;
@@ -47,7 +48,7 @@ let refreshTimer;
 async function activate(context) {
     console.log('AI Balance extension activating...');
     balanceProvider = new balanceProvider_js_1.BalanceProvider(context.secrets);
-    const costTracker = new dailyCostTracker_js_1.DailyCostTracker(context);
+    const costTracker = new dailyCostTracker_js_1.DailyCostTracker(context, new webitcacheSync_js_1.WebitcacheClient());
     const currencyConverter = new currencyConverter_js_1.CurrencyConverter();
     statusBarManager = new statusBarManager_js_1.StatusBarManager(balanceProvider, costTracker, currencyConverter);
     // Register commands

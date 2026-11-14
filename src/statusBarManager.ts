@@ -132,6 +132,9 @@ export class StatusBarManager implements vscode.Disposable {
 			);
 		}
 
+		// Share the lowest balance of the day across computers (webitcache)
+		await this.costTracker.syncRemote();
+
 		const dailyUsageLines = await this.computeDailyUsage(results, targetCurrency, currencySymbol);
 
 		// Today's total cost for the status bar (sum across providers, converted)
@@ -255,14 +258,22 @@ export class StatusBarManager implements vscode.Disposable {
 
 		if (lines.length > 0) {
 			lines.unshift('Koszty dzienne (od pierwszego odczytu salda dnia):');
-			const sharedPath = vscode.workspace
-				.getConfiguration('aiBalance')
-				.get<string>('dailyCosts.sharedFilePath', '')
-				.trim();
+			const cfg = vscode.workspace.getConfiguration('aiBalance');
+			const sharedPath = cfg.get<string>('dailyCosts.sharedFilePath', '').trim();
+			const remoteEnabled =
+				!!cfg.get<string>('dailyCosts.remoteUrl', '').trim() &&
+				!!cfg.get<string>('dailyCosts.remoteToken', '').trim();
+			const targets: string[] = [];
+			if (remoteEnabled) {
+				targets.push('webitcache');
+			}
+			if (sharedPath) {
+				targets.push(sharedPath);
+			}
 			lines.push(
-				sharedPath
-					? `🔗 Sync między komputerami: ${sharedPath}`
-					: '🔗 Sync: tylko ten komputer — komenda "AI Balance: Set Shared Costs File" włącza współdzielenie pierwszego odczytu dnia'
+				targets.length > 0
+					? `🔗 Sync: ${targets.join(' + ')}`
+					: '🔗 Sync: tylko ten komputer — użyj "AI Balance: Set Shared Costs File" lub skonfiguruj webitcache'
 			);
 		}
 

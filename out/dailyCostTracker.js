@@ -52,15 +52,13 @@ function localDateKey(date) {
 }
 /** Money spent during the day according to a single record. */
 function spentUsd(record) {
-    if (record.manualStartBalance !== undefined && record.lastBalance !== undefined) {
-        return Math.max(record.manualStartBalance - record.lastBalance, 0);
-    }
     if (record.metricKind === 'usage') {
         return Math.max(record.lastMetric - record.startMetric, 0);
     }
-    const start = record.startBalance ?? record.startMetric;
-    const last = record.lastBalance ?? record.lastMetric;
-    return Math.max(start - last, 0);
+    // Lowest balance of the day (shared across computers) is the day's end value
+    const start = record.manualStartBalance ?? record.startBalance ?? record.startMetric;
+    const end = record.dayMinBalance ?? record.lastBalance ?? record.lastMetric;
+    return Math.max(start - end, 0);
 }
 /**
  * Merges two observations of the same day: earliest start wins,
@@ -68,13 +66,34 @@ function spentUsd(record) {
  */
 function mergeRecords(a, b) {
     if (a.metricKind !== b.metricKind) {
-        return a.startAt <= b.startAt ? a : b;
+        const chosen = { ...(a.startAt <= b.startAt ? a : b) };
+        const other = a.startAt <= b.startAt ? b : a;
+        if (other.dayMinBalance !== undefined &&
+            (chosen.dayMinBalance === undefined || other.dayMinBalance < chosen.dayMinBalance)) {
+            chosen.dayMinBalance = other.dayMinBalance;
+            chosen.dayMinAt = other.dayMinAt;
+        }
+        return chosen;
     }
     const start = a.startAt <= b.startAt ? a : b;
     const last = a.lastAt >= b.lastAt ? a : b;
     const manual = [a, b]
         .filter((r) => r.manualStartBalance !== undefined)
         .sort((x, y) => (y.manualStartAt ?? 0) - (x.manualStartAt ?? 0))[0];
+    let dayMinBalance;
+    let dayMinAt;
+    for (const record of [a, b]) {
+        if (record.dayMinBalance === undefined) {
+            continue;
+        }
+        const at = record.dayMinAt ?? 0;
+        if (dayMinBalance === undefined ||
+            record.dayMinBalance < dayMinBalance ||
+            (record.dayMinBalance === dayMinBalance && at > (dayMinAt ?? 0))) {
+            dayMinBalance = record.dayMinBalance;
+            dayMinAt = at;
+        }
+    }
     return {
         date: start.date,
         metricKind: start.metricKind,
@@ -84,6 +103,8 @@ function mergeRecords(a, b) {
         lastAt: last.lastAt,
         startBalance: start.startBalance ?? (start.metricKind === 'balance' ? start.startMetric : undefined),
         lastBalance: last.lastBalance ?? (last.metricKind === 'balance' ? last.lastMetric : undefined),
+        dayMinBalance,
+        dayMinAt,
         manualStartBalance: manual?.manualStartBalance,
         manualStartAt: manual?.manualStartAt
     };
@@ -113,8 +134,10 @@ function mergeStores(a, b) {
 }
 class DailyCostTracker {
     context;
-    constructor(context) {
+    remote;
+    constructor(context, remote) {
         this.context = context;
+        this.remote = remote;
     }
     load() {
         const stored = this.context.globalState.get(STORAGE_KEY);
@@ -144,6 +167,8 @@ class DailyCostTracker {
                 metricKind: kind,
                 startBalance: balanceUsd,
                 lastBalance: balanceUsd,
+                dayMinBalance: balanceUsd,
+                dayMinAt: balanceUsd !== undefined ? now : undefined,
                 // preserve a manual override when the metric kind changes
                 manualStartBalance: existing?.manualStartBalance,
                 manualStartAt: existing?.manualStartAt
@@ -164,6 +189,12 @@ class DailyCostTracker {
                     existing.startBalance = balanceUsd;
                 }
                 existing.lastBalance = balanceUsd;
+                if (existing.dayMinBalance === undefined ||
+                    balanceUsd < existing.dayMinBalance ||
+                    (balanceUsd === existing.dayMinBalance && now > (existing.dayMinAt ?? 0))) {
+                    existing.dayMinBalance = balanceUsd;
+                    existing.dayMinAt = now;
+                }
             }
         }
         this.prune(provider, new Date());
@@ -238,6 +269,89 @@ class DailyCostTracker {
             }
         }
         return total;
+    }
+    /** Snapshot of today's lowest balances, ready to push to webitcache. */
+    buildTodaySnapshot() {
+        const today = localDateKey(new Date());
+        const store = this.load();
+        const providers = {};
+        for (const [key, data] of Object.entries(store.providers)) {
+            const record = data.records[today];
+            if (!record) {
+                continue;
+            }
+            const min = record.dayMinBalance ?? record.lastBalance;
+            const at = record.dayMinAt ?? record.lastAt;
+            if (min === undefined) {
+                continue;
+            }
+            providers[key] = { m: min, t: at };
+        }
+        return Object.keys(providers).length > 0 ? { v: 1, date: today, p: providers } : null;
+    }
+    /** Merges the remote lowest-balance-of-the-day state into the local records. */
+    async applyRemoteSnapshot(snapshot) {
+        if (!snapshot) {
+            return;
+        }
+        const today = localDateKey(new Date());
+        if (snapshot.date !== today) {
+            return;
+        }
+        const store = this.load();
+        let changed = false;
+        for (const [provider, remote] of Object.entries(snapshot.p)) {
+            if (!Number.isFinite(remote.m)) {
+                continue;
+            }
+            const providerStore = store.providers[provider] ?? { records: {} };
+            store.providers[provider] = providerStore;
+            let record = providerStore.records[today];
+            if (!record) {
+                const t = Number.isFinite(remote.t) ? remote.t : Date.now();
+                record = {
+                    date: today,
+                    startMetric: remote.m,
+                    startAt: t,
+                    lastMetric: remote.m,
+                    lastAt: t,
+                    metricKind: 'balance',
+                    startBalance: remote.m,
+                    lastBalance: remote.m,
+                    dayMinBalance: remote.m,
+                    dayMinAt: t
+                };
+                providerStore.records[today] = record;
+                changed = true;
+            }
+            else if (record.dayMinBalance === undefined ||
+                remote.m < record.dayMinBalance ||
+                (remote.m === record.dayMinBalance && remote.t > (record.dayMinAt ?? 0))) {
+                record.dayMinBalance = remote.m;
+                record.dayMinAt = remote.t;
+                changed = true;
+            }
+        }
+        if (changed) {
+            await this.context.globalState.update(STORAGE_KEY, store);
+            await this.syncSharedFile(store);
+        }
+    }
+    /** Pulls the shared state, merges it locally, then pushes the merged day state. */
+    async syncRemote() {
+        if (!this.remote) {
+            return;
+        }
+        const today = localDateKey(new Date());
+        const remote = await this.remote.pull(today);
+        if (!remote.ok) {
+            return; // service unreachable / token rejected — skip push
+        }
+        await this.applyRemoteSnapshot(remote.snapshot);
+        const snapshot = this.buildTodaySnapshot();
+        if (snapshot) {
+            await this.remote.push(snapshot);
+        }
     }
     /** Daily totals for the last `days` days (oldest first), summed across providers. */
     getRecentDays(days) {

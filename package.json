@@ -2,7 +2,7 @@
   "name": "ai-balance",
   "displayName": "AI Balance",
   "description": "Shows DeepSeek and OpenRouter API balance in the status bar",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "publisher": "sulaco",
   "icon": "icons/deepseek.png",
   "license": "MIT",
@@ -120,6 +120,16 @@
           "type": "string",
           "default": "",
           "description": "Optional path to a shared JSON file (e.g. in OneDrive/Dropbox) that syncs daily balance baselines across computers using the same API key. Leave empty for local-only tracking."
+        },
+        "aiBalance.dailyCosts.remoteUrl": {
+          "type": "string",
+          "default": "https://webitcache.analogbrain.com",
+          "description": "webitcache base URL used to share the lowest balance of the day across computers. Leave empty to disable remote sync."
+        },
+        "aiBalance.dailyCosts.remoteToken": {
+          "type": "string",
+          "default": "w-_TFrOQBwU_7mVJOOC7cvKWxAl_4raI6YEBW2Tsx7U",
+          "description": "webitcache Bearer token — use the SAME token on every computer. Anyone with this token can read/write the shared cache; keep the repo private. Leave empty to disable remote sync."
         }
       }
     }
